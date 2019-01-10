@@ -31,8 +31,8 @@
 
 /* I2C bus */
 #define PICO_I2CA i2c2
-#define PICO_I2CB i2c3
-#define PICO_I2CC i2c1
+#define PICO_I2CB i2c1
+#define PICO_I2CC i2c3
 
 #define PICO_SPIA ecspi3
 
@@ -377,9 +377,9 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc2>;
 	no-1-8-v;
-	keep-power-in-suspend;
 	non-removable;
-//	cd-post;
+	keep-power-in-suspend;
+	cd-post;
 	pm-ignore-notify;
 	wifi-host;
 	status = "okay";
@@ -392,6 +392,22 @@
 };
 
 &iomuxc {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_hog_1>;
+	pinctrl_hog_1: hoggrp-1 {
+		fsl,pins = <
+			MX6UL_PAD_CSI_VSYNC__GPIO4_IO19		0x79	/* GPIO_P24 */
+			MX6UL_PAD_CSI_HSYNC__GPIO4_IO20		0x79	/* GPIO_P25 */
+			MX6UL_PAD_CSI_DATA00__GPIO4_IO21	0x79	/* GPIO_P26 */
+			MX6UL_PAD_CSI_DATA01__GPIO4_IO22	0x79	/* GPIO_P28 */
+			MX6UL_PAD_CSI_DATA02__GPIO4_IO23	0x79	/* GPIO_P30 */
+			MX6UL_PAD_CSI_DATA03__GPIO4_IO24	0x79	/* GPIO_P32 */
+			MX6UL_PAD_UART1_CTS_B__GPIO1_IO18	0x79	/* GPIO_P34 */
+			MX6UL_PAD_UART4_RX_DATA__GPIO1_IO29	0x79	/* GPIO_P44 */
+			MX6UL_PAD_SNVS_TAMPER2__GPIO5_IO02	0x79	/* GPIO_P48 */
+		>;
+	};
+
 	pinctrl_enet2: enet2grp {
 		fsl,pins = <
 			MX6UL_PAD_ENET1_TX_DATA1__ENET2_MDIO	0x1b0b0
@@ -441,21 +457,6 @@
 		fsl,pins = <
 			MX6UL_PAD_UART1_TX_DATA__I2C3_SCL	0x4001b8b0
 			MX6UL_PAD_UART1_RX_DATA__I2C3_SDA	0x4001b8b0
-		>;
-	};
-
-	pinctrl_wifi_ctrl: wifi_ctrlgrp {
-		fsl,pins = <
-			MX6UL_PAD_NAND_DATA06__GPIO4_IO08 0x03029 /* wifi-reg-on */
-			MX6UL_PAD_NAND_DATA04__GPIO4_IO06 0x79    /* wifi-host-wake */
-		>;
-	};
-
-	pinctrl_bt_ctrl: bt_ctrlgrp {
-		fsl,pins = <
-			MX6UL_PAD_SNVS_TAMPER9__GPIO5_IO09   0x79   /* bluetooth-reg-on */
-			MX6UL_PAD_SNVS_TAMPER8__GPIO5_IO08   0x79   /* bluetooth-wake */
-			MX6UL_PAD_NAND_DATA05__GPIO4_IO07    0x79   /* bluetooth-host-wake */
 		>;
 	};
 
@@ -600,6 +601,21 @@
 	pinctrl_wdog: wdoggrp {
 		fsl,pins = <
 			MX6UL_PAD_LCD_RESET__WDOG1_WDOG_ANY    0x30b0
+		>;
+	};
+
+	pinctrl_wifi_ctrl: wifi_ctrlgrp {
+		fsl,pins = <
+			MX6UL_PAD_NAND_DATA06__GPIO4_IO08 0x03029 /* wifi-reg-on */
+			MX6UL_PAD_NAND_DATA04__GPIO4_IO06 0x79    /* wifi-host-wake */
+		>;
+	};
+
+	pinctrl_bt_ctrl: bt_ctrlgrp {
+		fsl,pins = <
+			MX6UL_PAD_SNVS_TAMPER9__GPIO5_IO09   0x79   /* bluetooth-reg-on */
+			MX6UL_PAD_SNVS_TAMPER8__GPIO5_IO08   0x79   /* bluetooth-wake */
+			MX6UL_PAD_NAND_DATA05__GPIO4_IO07    0x79   /* bluetooth-host-wake */
 		>;
 	};
 };
