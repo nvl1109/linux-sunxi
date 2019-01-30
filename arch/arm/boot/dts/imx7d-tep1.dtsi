@@ -240,7 +240,7 @@
 
 		pinctrl_pcie: pcie_ctrlgrp {
 			fsl,pins = <
-				MX7D_PAD_SAI1_RX_SYNC__GPIO6_IO16	0x15 /* pcie reset */
+				MX7D_PAD_SAI1_TX_DATA__GPIO6_IO15	0x15 /* pcie reset */
 			>;
 		};
 
@@ -828,7 +828,7 @@
 &pcie {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
-	reset-gpio = <&gpio6 16 GPIO_ACTIVE_LOW>;
+	reset-gpio = <&gpio6 15 GPIO_ACTIVE_LOW>;
 	status = "okay";
 };
 
