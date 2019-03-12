@@ -73,6 +73,7 @@ dtb-$(CONFIG_ARCH_FSL_IMX8MQ) += fsl-imx8mq-ddr3l-arm2.dtb \
 				 pico-8m-lcdif-sn65dsi84-g156xw01.dtb \
 				 pico-8m-dual.dtb \
 				 pico-8m-dual-sn65dsi84.dtb \
+				 pico-8m-voicehat.dtb \
 				 wand-pi-8m.dtb
 
 always		:= $(dtb-y)
