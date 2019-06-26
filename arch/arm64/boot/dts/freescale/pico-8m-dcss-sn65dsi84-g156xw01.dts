@@ -252,7 +252,7 @@
                             /* DSI registers */
 		                    0x26 0x00 0x2d 0x00
 		                    /* LVDS registers */
-                            0x7a 0x00 0x03 0x00
+                            0x78 0x00 0x03 0x00
 
                             /* video registers */
                             /* cha-al-len-l, cha-al-len-h, chb-al-len-l, chb-al-len-h */
