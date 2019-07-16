@@ -405,7 +405,7 @@
 
 		pinctrl_nfc_ctrl: nfc_ctrl {
 			fsl,pins = <
-				MX8MQ_IOMUXC_SAI3_MCLK_GPIO5_IO2		0x19	/* PIN_ENABLE */
+				MX8MQ_IOMUXC_ECSPI1_MOSI_GPIO5_IO7		0x19	/* PIN_ENABLE */
 				MX8MQ_IOMUXC_NAND_CE3_B_GPIO3_IO4		0x19	/* PIN_INT */
 			>;
 		};
@@ -723,10 +723,10 @@
 		reg = <0x2a>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_nfc_ctrl>;
-		clock-frequency = <400000>;
+		clock-frequency = <100000>;
 		interrupt-gpios = <&gpio3 4 0>;
-		enable-gpios = <&gpio5 2 0>;
-		/* When you enable NFC, you must to disable pwm4 device */
+		enable-gpios = <&gpio5 7 0>;
+		/* When you enable NFC, you must to disable ov5645_mipi2 device */
 		status = "disabled";
 	};
 };
