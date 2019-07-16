@@ -311,9 +311,9 @@ static int pn54x_dev_open(struct inode *inode, struct file *filp)
 
 	filp->private_data = pn54x_dev;
 
-	pr_info("%s : %d,%d\n", __func__, imajor(inode), iminor(inode));
+	// pr_info("%s : %d,%d\n", __func__, imajor(inode), iminor(inode));
 
-	// pn544_enable(pn54x_dev, MODE_RUN);
+	pn544_enable(pn54x_dev, MODE_RUN);
 
 	return 0;
 }
@@ -324,7 +324,7 @@ static int pn54x_dev_release(struct inode *inode, struct file *filp)
 	//										   struct pn54x_dev,
 	//										   pn54x_device);
 
-	pr_info("%s : closing %d,%d\n", __func__, imajor(inode), iminor(inode));
+	// pr_info("%s : closing %d,%d\n", __func__, imajor(inode), iminor(inode));
 
 	// pn544_disable(pn54x_dev);
 
