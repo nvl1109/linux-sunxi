@@ -896,7 +896,6 @@
 			data-lanes = <2>;
 			csis-hs-settle = <13>;
 			csis-clk-settle = <2>;
-			csis-wclk;
 		};
 
 		csi_mipi_ep: endpoint2 {
