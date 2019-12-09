@@ -541,6 +541,8 @@ void dcss_dtg_sync_set(struct dcss_soc *dcss, struct videomode *vm)
 			 "difference is %d Hz\n",
 			 (actual_clk / 1000), (pixclock / 1000),
 			 (int)(actual_clk - pixclock));
+	} else {
+		pr_info("LINH dcss-dtg %s(): DBG clock %u done\n", __func__, actual_clk);
 	}
 
 	msleep(50);

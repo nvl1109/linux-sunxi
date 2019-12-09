@@ -1810,6 +1810,7 @@ static int drm_fb_helper_single_fb_probe(struct drm_fb_helper *fb_helper,
 	}
 
 	crtc_count = 0;
+	pr_info("LINH drm_fb_helper %s(): DBG crtc_count %d\n", __func__, fb_helper->crtc_count);
 	for (i = 0; i < fb_helper->crtc_count; i++) {
 		struct drm_display_mode *desired_mode;
 		struct drm_mode_set *mode_set;
@@ -1822,6 +1823,7 @@ static int drm_fb_helper_single_fb_probe(struct drm_fb_helper *fb_helper,
 
 		desired_mode = fb_helper->crtc_info[i].desired_mode;
 		mode_set = &fb_helper->crtc_info[i].mode_set;
+		pr_info("LINH drm_fb_helper %s(): DBG %d desired_mode %p, mode_set %p\n", __func__, i, desired_mode, mode_set);
 
 		if (!desired_mode)
 			continue;

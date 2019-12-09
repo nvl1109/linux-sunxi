@@ -149,6 +149,7 @@ static int dcss_crtc_atomic_check(struct drm_crtc *crtc,
 				  struct drm_crtc_state *state)
 {
 	/* TODO: other checks? */
+	// pr_info("LINH dcss-crtc %s(): DBG \n", __func__);
 
 	return 0;
 }
@@ -157,6 +158,8 @@ static void dcss_crtc_atomic_begin(struct drm_crtc *crtc,
 				   struct drm_crtc_state *old_crtc_state)
 {
 	drm_crtc_vblank_on(crtc);
+
+	// pr_info("LINH dcss-crtc %s(): DBG \n", __func__);
 
 	spin_lock_irq(&crtc->dev->event_lock);
 	if (crtc->state->event) {
@@ -173,6 +176,8 @@ static void dcss_crtc_atomic_flush(struct drm_crtc *crtc,
 	struct dcss_crtc *dcss_crtc = container_of(crtc, struct dcss_crtc,
 						   base);
 	struct dcss_soc *dcss = dev_get_drvdata(dcss_crtc->dev->parent);
+
+	// pr_info("LINH dcss-crtc %s(): DBG \n", __func__);
 
 	dcss_trace_module(TRACE_DRM_CRTC, TRACE_FLUSH);
 
@@ -255,6 +260,7 @@ static void dcss_crtc_atomic_enable(struct drm_crtc *crtc,
 	dcss_dtg_ctxld_kick_irq_enable(dcss, true);
 
 	dcss_dtg_sync_set(dcss, &vm);
+	pr_info("LINH dcss-crtc %s(): DBG dcss_dtg_sync_set done\n", __func__);
 
 	dcss_ss_subsam_set(dcss, dcss_crtc->opipe_pix_format);
 	dcss_ss_sync_set(dcss, &vm, mode->flags & DRM_MODE_FLAG_PHSYNC,
@@ -279,6 +285,8 @@ static void dcss_crtc_atomic_disable(struct drm_crtc *crtc,
 	struct dcss_crtc *dcss_crtc = container_of(crtc, struct dcss_crtc,
 						   base);
 	struct dcss_soc *dcss = dev_get_drvdata(dcss_crtc->dev->parent);
+
+	pr_info("LINH dcss-crtc %s(): DBG \n", __func__);
 
 	drm_atomic_helper_disable_planes_on_crtc(old_crtc_state, false);
 
@@ -317,9 +325,12 @@ static enum drm_mode_status dcss_crtc_mode_valid(struct drm_crtc *crtc,
 
 	DRM_DEV_DEBUG_DRIVER(crtc->dev->dev, "Validating mode:\n");
 	drm_mode_debug_printmodeline(mode);
-	if (!dcss_dtg_mode_valid(dcss, mode->clock, mode->crtc_clock))
+	if (!dcss_dtg_mode_valid(dcss, mode->clock, mode->crtc_clock)) {
+		pr_info("LINH dcss-crtc %s(): DBG MODE_OK\n", __func__);
 		return MODE_OK;
+	}
 
+	pr_info("LINH dcss-crtc %s(): DBG MODE_NOCLOCK\n", __func__);
 	return MODE_NOCLOCK;
 }
 
@@ -332,6 +343,8 @@ static bool dcss_crtc_mode_fixup(struct drm_crtc *crtc,
 						   base);
 	struct dcss_soc *dcss = dev_get_drvdata(dcss_crtc->dev->parent);
 	int clock = adjusted->clock, crtc_clock = adjusted->crtc_clock;
+
+	pr_info("LINH dcss-crtc %s(): DBG clock = %d, crtc clock %d\n", __func__, clock, crtc_clock);
 
 	DRM_DEV_DEBUG_DRIVER(crtc->dev->dev, "Fixup mode:\n");
 	DRM_DEV_DEBUG_DRIVER(crtc->dev->dev, "clock=%d, crtc_clock=%d\n",
@@ -385,6 +398,7 @@ static int dcss_crtc_init(struct dcss_crtc *crtc,
 
 	crtc->base.port = pdata->of_node;
 	drm_crtc_helper_add(&crtc->base, &dcss_helper_funcs);
+	pr_info("LINH dcss-crtc %s(): DBG crtc helper added\n", __func__);
 	ret = drm_crtc_init_with_planes(drm, &crtc->base, &crtc->plane[0]->base,
 					NULL, &dcss_crtc_funcs, NULL);
 	if (ret) {
@@ -458,6 +472,7 @@ static int dcss_crtc_init(struct dcss_crtc *crtc,
 	}
 
 	disable_irq(crtc->irq);
+	pr_info("LINH dcss-crtc %s(): DBG DONE\n", __func__);
 
 	return 0;
 }

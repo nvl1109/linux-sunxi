@@ -41,268 +41,1075 @@ struct otm1920b {
 	struct drm_panel	panel;
 	struct mipi_dsi_device	*dsi;
 
-	struct gpio_desc	*power;
+	// struct gpio_desc	*power;
 	struct gpio_desc	*reset;
 	u32	timing_mode;
 };
 
-enum otm1920b_op {
-	ILI9881C_SWITCH_PAGE,
-	ILI9881C_COMMAND,
+#define WAIT_TYPE_US 1
+#define WAIT_TYPE_MS 2
+#define WAIT_TYPE_S  3
+
+struct dsi_cmd_desc {
+	int wait;
+	int waittype;
+	int dlen;
+	char *payload;
 };
 
-struct otm1920b_instr {
-	enum otm1920b_op	op;
 
-	union arg {
-		struct cmd {
-			u8	cmd;
-			u8	data;
-		} cmd;
-		u8	page;
-	} arg;
+/*******************************************************************************
+** Power ON Sequence(sleep mode to Normal mode)
+*/
+static char adrsft1[] = {
+	0x00,
+	0x00,
 };
 
-#define ILI9881C_SWITCH_PAGE_INSTR(_page)	\
-	{					\
-		.op = ILI9881C_SWITCH_PAGE,	\
-		.arg = {			\
-			.page = (_page),	\
-		},				\
-	}
-
-#define ILI9881C_COMMAND_INSTR(_cmd, _data)		\
-	{						\
-		.op = ILI9881C_COMMAND,		\
-		.arg = {				\
-			.cmd = {			\
-				.cmd = (_cmd),		\
-				.data = (_data),	\
-			},				\
-		},					\
-	}
-
-static struct otm1920b_instr otm1920b_init[] = {
-	// ILI9881C_SWITCH_PAGE_INSTR(3),
-	// ILI9881C_COMMAND_INSTR(0x01, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x02, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x03, 0x73),
-	// ILI9881C_COMMAND_INSTR(0x04, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x05, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x06, 0x0a),
-	// ILI9881C_COMMAND_INSTR(0x07, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x08, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x09, 0x01),
-	// ILI9881C_COMMAND_INSTR(0x0a, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x0b, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x0c, 0x01),
-	// ILI9881C_COMMAND_INSTR(0x0d, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x0e, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x0f, 0x14),
-	// ILI9881C_COMMAND_INSTR(0x10, 0x14),
-	// ILI9881C_COMMAND_INSTR(0x11, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x12, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x13, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x14, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x15, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x16, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x17, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x18, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x19, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x1a, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x1b, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x1c, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x1d, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x1e, 0x40),
-	// ILI9881C_COMMAND_INSTR(0x1f, 0x80),
-	// ILI9881C_COMMAND_INSTR(0x20, 0x06),
-	// ILI9881C_COMMAND_INSTR(0x21, 0x01),
-	// ILI9881C_COMMAND_INSTR(0x22, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x23, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x24, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x25, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x26, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x27, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x28, 0x33),
-	// ILI9881C_COMMAND_INSTR(0x29, 0x03),
-	// ILI9881C_COMMAND_INSTR(0x2a, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x2b, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x2c, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x2d, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x2e, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x2f, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x30, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x31, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x32, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x33, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x34, 0x04),
-	// ILI9881C_COMMAND_INSTR(0x35, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x36, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x37, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x38, 0x78),
-	// ILI9881C_COMMAND_INSTR(0x39, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x3a, 0x40),
-	// ILI9881C_COMMAND_INSTR(0x3b, 0x40),
-	// ILI9881C_COMMAND_INSTR(0x3c, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x3d, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x3e, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x3f, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x40, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x41, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x42, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x43, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x44, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x50, 0x01),
-	// ILI9881C_COMMAND_INSTR(0x51, 0x23),
-	// ILI9881C_COMMAND_INSTR(0x52, 0x45),
-	// ILI9881C_COMMAND_INSTR(0x53, 0x67),
-	// ILI9881C_COMMAND_INSTR(0x54, 0x89),
-	// ILI9881C_COMMAND_INSTR(0x55, 0xab),
-	// ILI9881C_COMMAND_INSTR(0x56, 0x01),
-	// ILI9881C_COMMAND_INSTR(0x57, 0x23),
-	// ILI9881C_COMMAND_INSTR(0x58, 0x45),
-	// ILI9881C_COMMAND_INSTR(0x59, 0x67),
-	// ILI9881C_COMMAND_INSTR(0x5a, 0x89),
-	// ILI9881C_COMMAND_INSTR(0x5b, 0xab),
-	// ILI9881C_COMMAND_INSTR(0x5c, 0xcd),
-	// ILI9881C_COMMAND_INSTR(0x5d, 0xef),
-	// ILI9881C_COMMAND_INSTR(0x5e, 0x11),
-	// ILI9881C_COMMAND_INSTR(0x5f, 0x01),
-	// ILI9881C_COMMAND_INSTR(0x60, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x61, 0x15),
-	// ILI9881C_COMMAND_INSTR(0x62, 0x14),
-	// ILI9881C_COMMAND_INSTR(0x63, 0x0e),
-	// ILI9881C_COMMAND_INSTR(0x64, 0x0f),
-	// ILI9881C_COMMAND_INSTR(0x65, 0x0c),
-	// ILI9881C_COMMAND_INSTR(0x66, 0x0d),
-	// ILI9881C_COMMAND_INSTR(0x67, 0x06),
-	// ILI9881C_COMMAND_INSTR(0x68, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x69, 0x07),
-	// ILI9881C_COMMAND_INSTR(0x6a, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x6b, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x6c, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x6d, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x6e, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x6f, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x70, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x71, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x72, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x73, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x74, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x75, 0x01),
-	// ILI9881C_COMMAND_INSTR(0x76, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x77, 0x14),
-	// ILI9881C_COMMAND_INSTR(0x78, 0x15),
-	// ILI9881C_COMMAND_INSTR(0x79, 0x0e),
-	// ILI9881C_COMMAND_INSTR(0x7a, 0x0f),
-	// ILI9881C_COMMAND_INSTR(0x7b, 0x0c),
-	// ILI9881C_COMMAND_INSTR(0x7c, 0x0d),
-	// ILI9881C_COMMAND_INSTR(0x7d, 0x06),
-	// ILI9881C_COMMAND_INSTR(0x7e, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x7f, 0x07),
-	// ILI9881C_COMMAND_INSTR(0x80, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x81, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x82, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x83, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x84, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x85, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x86, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x87, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x88, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x89, 0x02),
-	// ILI9881C_COMMAND_INSTR(0x8A, 0x02),
-
-	// ILI9881C_SWITCH_PAGE_INSTR(4),
-	// ILI9881C_COMMAND_INSTR(0x00, 0x80),
-	// ILI9881C_COMMAND_INSTR(0x6C, 0x15),
-	// ILI9881C_COMMAND_INSTR(0x6E, 0x2a),
-	// ILI9881C_COMMAND_INSTR(0x6F, 0x33),
-	// ILI9881C_COMMAND_INSTR(0x3A, 0x94),
-	// ILI9881C_COMMAND_INSTR(0x8D, 0x1a),
-	// ILI9881C_COMMAND_INSTR(0x87, 0xba),
-	// ILI9881C_COMMAND_INSTR(0x26, 0x76),
-	// ILI9881C_COMMAND_INSTR(0xB2, 0xd1),
-	// ILI9881C_COMMAND_INSTR(0xB5, 0x06),
-
-	// ILI9881C_SWITCH_PAGE_INSTR(1),
-	// ILI9881C_COMMAND_INSTR(0x22, 0x0A),
-	// ILI9881C_COMMAND_INSTR(0x31, 0x00),
-	// ILI9881C_COMMAND_INSTR(0x53, 0x8C),
-	// ILI9881C_COMMAND_INSTR(0x55, 0x8F),
-	// ILI9881C_COMMAND_INSTR(0x50, 0xc0),
-	// ILI9881C_COMMAND_INSTR(0x51, 0xc0),
-	// ILI9881C_COMMAND_INSTR(0x60, 0x08),
-	// ILI9881C_COMMAND_INSTR(0xA0, 0x08),
-	// ILI9881C_COMMAND_INSTR(0xA1, 0x19),
-	// ILI9881C_COMMAND_INSTR(0xA2, 0x26),
-	// ILI9881C_COMMAND_INSTR(0xA3, 0x1a),
-	// ILI9881C_COMMAND_INSTR(0xA4, 0x1d),
-	// ILI9881C_COMMAND_INSTR(0xA5, 0x2c),
-	// ILI9881C_COMMAND_INSTR(0xA6, 0x21),
-	// ILI9881C_COMMAND_INSTR(0xA7, 0x22),
-	// ILI9881C_COMMAND_INSTR(0xA8, 0x7c),
-	// ILI9881C_COMMAND_INSTR(0xA9, 0x21),
-	// ILI9881C_COMMAND_INSTR(0xAA, 0x2e),
-	// ILI9881C_COMMAND_INSTR(0xAB, 0x66),
-	// ILI9881C_COMMAND_INSTR(0xAC, 0x1C),
-	// ILI9881C_COMMAND_INSTR(0xAD, 0x18),
-	// ILI9881C_COMMAND_INSTR(0xAE, 0x4e),
-	// ILI9881C_COMMAND_INSTR(0xAF, 0x1a),
-	// ILI9881C_COMMAND_INSTR(0xB0, 0x22),
-	// ILI9881C_COMMAND_INSTR(0xB1, 0x49),
-	// ILI9881C_COMMAND_INSTR(0xB2, 0x56),
-	// ILI9881C_COMMAND_INSTR(0xB3, 0x39),
-	// ILI9881C_COMMAND_INSTR(0xC0, 0x08),
-	// ILI9881C_COMMAND_INSTR(0xC1, 0x1a),
-	// ILI9881C_COMMAND_INSTR(0xC2, 0x26),
-	// ILI9881C_COMMAND_INSTR(0xC3, 0x0b),
-	// ILI9881C_COMMAND_INSTR(0xC4, 0x0e),
-	// ILI9881C_COMMAND_INSTR(0xC5, 0x24),
-	// ILI9881C_COMMAND_INSTR(0xC6, 0x18),
-	// ILI9881C_COMMAND_INSTR(0xC7, 0x1b),
-	// ILI9881C_COMMAND_INSTR(0xC8, 0x85),
-	// ILI9881C_COMMAND_INSTR(0xC9, 0x17),
-	// ILI9881C_COMMAND_INSTR(0xCA, 0x23),
-	// ILI9881C_COMMAND_INSTR(0xCB, 0x79),
-	// ILI9881C_COMMAND_INSTR(0xCC, 0x1C),
-	// ILI9881C_COMMAND_INSTR(0xCD, 0x1f),
-	// ILI9881C_COMMAND_INSTR(0xCE, 0x50),
-	// ILI9881C_COMMAND_INSTR(0xCF, 0x2d),
-	// ILI9881C_COMMAND_INSTR(0xD0, 0x31),
-	// ILI9881C_COMMAND_INSTR(0xD1, 0x49),
-	// ILI9881C_COMMAND_INSTR(0xD2, 0x57),
-	// ILI9881C_COMMAND_INSTR(0xD3, 0x39),
-
-	// ILI9881C_SWITCH_PAGE_INSTR(0),
+static char cmd2_ena1[] = {
+	0xff,
+	0x19, 0x02, 0x01, 0x00,
 };
+
+static char adrsft2[] = {
+	0x00,
+	0x80,
+};
+
+static char cmd2_ena2[] = {
+	0xff,
+	0x19, 0x02,
+};
+
+static char adrsft3[] = {
+	0x00,
+	0x83,
+};
+
+static char adrsft4[] = {
+	0xf3,
+	0xca,
+};
+
+static char adrsft5[] = {
+	0x00,
+	0x90,
+};
+
+static char adrsft6[] = {
+	0xc4,
+	0x00,
+};
+
+static char adrsft7[] = {
+	0x00,
+	0xb4,
+};
+
+static char adrsft8[] = {
+	0xc0,
+	0xc0,
+};
+
+static char adrsft9[] = {
+	0x00,
+	0x87,
+};
+
+static char pixel_eyes_setting[] = {
+	0xa4,
+	0x15,
+};
+
+static char adrsft10[] = {
+	0x00,
+	0x00,
+};
+/*
+static char caset_data[] = {
+	0x2A,
+	0x00,0x00,0x04, 0x37,
+};
+
+static char paset_data[] = {
+	0x2B,
+	0x00,0x00,0x07,0x7f,
+};
+*/
+static char tear_on[] = {
+	0x35,
+	0x00,
+};
+
+static char bl_enable[] = {
+	0x53,
+	0x24,
+};
+/*******************************************************************************
+**display effect
+*/
+//ce
+//0x00 0x00
+static char orise_clever_mode[] = {
+	0x59,
+	0x03,
+};
+
+static char addr_shift_a0[] = {
+	0x00,
+	0xa0,
+};
+
+static char ce_d6_1[] = {
+	0xD6,
+	0x03, 0x01, 0x00, 0x03, 0x03,
+	0x00, 0xfd, 0x00, 0x03, 0x06,
+	0x06, 0x02
+};
+
+static char addr_shift_b0[] = {
+	0x00,
+	0xb0,
+};
+
+static char ce_d6_2[] = {
+	0xD6,
+	0x00, 0x00, 0x66, 0xb3, 0xcd,
+	0xb3, 0xcd, 0xb3, 0xa6, 0xb3,
+	0xcd, 0xb3
+};
+
+static char addr_shift_c0[] = {
+	0x00,
+	0xc0,
+};
+
+static char ce_d6_3[] = {
+	0xD6,
+	0x26, 0x00, 0x89, 0x77, 0x89,
+	0x77, 0x89, 0x77, 0x6f, 0x77,
+	0x89, 0x77
+};
+
+static char addr_shift_d0[] = {
+	0x00,
+	0xd0,
+};
+
+static char ce_d6_4[] = {
+	0xD6,
+	0x26, 0x3c, 0x44, 0x3c, 0x44,
+	0x3c, 0x44, 0x3c, 0x37, 0x3c,
+	0x44, 0x3c
+};
+
+//0x00 0x80
+static char ce_cmd[] = {
+	0xD6,
+	0x3A,
+};
+
+//sharpness
+//0x00 0x00
+static char sp_cmd[] = {
+	0x59,
+	0x03,
+};
+
+static char sp_shift_0x90[] = {
+	0x00,
+	0x90,
+};
+
+static char sp_D7_1[] = {
+	0xD7,
+	0x83,
+};
+
+static char sp_shift_0x92[] = {
+	0x00,
+	0x92,
+};
+
+static char sp_D7_2[] = {
+	0xD7,
+	0xff,
+};
+
+static char sp_shift_0x93[] = {
+	0x00,
+	0x93,
+};
+
+static char sp_D7_3[] = {
+	0xD7,
+	0x00,
+};
+
+//CABC
+//0x00 0x00
+//0x59 0x03
+//0x00 0x80
+static char cabc_ca[] = {
+	0xCA,
+	0x80,0x88,0x90,0x98,0xa0,
+	0xa8,0xb0,0xb8,0xc0,0xc7,
+	0xcf,0xd7,0xdf,0xe7,0xef,
+	0xf7,0xcc,0xff,0xa5,0xff,
+	0x80,0xff,0x53,0x53,0x53,
+};
+//0x00 0x00
+static char cabc_c6_G1[] = {
+	0xc6,
+	0x10,
+};
+static char cabc_c7_G1[] = {
+	0xC7,
+	0xf0,0x8e,0xbc,0x9d,0xac,
+	0x9c,0xac,0x9b,0xab,0x8c,
+	0x67,0x55,0x45,0x44,0x44,
+	0x44,0x44,0x44
+};
+
+//0x00 0x00
+static char cabc_c6_G2[] = {
+	0xc6,
+	0x11,
+};
+static char cabc_c7_G2[] = {
+	0xC7,
+	0xf0,0xac,0xab,0xbc,0xba,
+	0x9b,0xab,0xba,0xb8,0xab,
+	0x78,0x56,0x55,0x44,0x44,
+	0x44,0x44,0x44
+};
+
+//0x00 0x00
+static char cabc_c6_G3[] = {
+	0xc6,
+	0x12,
+};
+static char cabc_c7_G3[] = {
+	0xC7,
+	0xf0,0xab,0xaa,0xab,0xab,
+	0xab,0xaa,0xaa,0xa9,0x9b,
+	0x8a,0x67,0x55,0x45,0x44,
+	0x44,0x44,0x44
+};
+
+//0x00 0x00
+static char cabc_c6_G4[] = {
+	0xc6,
+	0x13,
+};
+static char cabc_c7_G4[] = {
+	0xC7,
+	0xf0,0xaa,0xaa,0xab,0x9b,
+	0x9b,0xaa,0xa9,0xa9,0xa9,
+	0x9a,0x78,0x56,0x55,0x44,
+	0x44,0x44,0x44
+};
+
+//0x00 0x00
+static char cabc_c6_G5[] = {
+	0xc6,
+	0x14,
+};
+static char cabc_c7_G5[] = {
+	0xC7,
+	0xf0,0xa9,0xaa,0xab,0x9a,
+	0xaa,0xa9,0xa9,0x8a,0xa9,
+	0x99,0x8a,0x67,0x55,0x55,
+	0x44,0x44,0x33
+};
+
+//0x00 0x00
+static char cabc_c6_G6[] = {
+	0xc6,
+	0x15,
+};
+static char cabc_c7_G6[] = {
+	0xC7,
+	0xf0,0xa8,0xaa,0xaa,0x7b,
+	0xab,0x99,0x9a,0x99,0x99,
+	0x8b,0xa9,0x55,0x55,0x55,
+	0x55,0x45,0x44
+};
+
+//0x00 0x00
+static char cabc_c6_G7[] = {
+	0xc6,
+	0x16,
+};
+static char cabc_c7_G7[] = {
+	0xC7,
+	0xe0,0x99,0x7b,0x8d,0x7c,
+	0x7b,0x8c,0x89,0x7b,0x8a,
+	0x8a,0x89,0x68,0x55,0x55,
+	0x55,0x55,0x55
+};
+
+//0x00 0x00
+static char cabc_c6_G8[] = {
+	0xc6,
+	0x17,
+};
+static char cabc_c7_G8[] = {
+	0xC7,
+	0xf0,0x97,0xaa,0xaa,0x89,
+	0xaa,0xa8,0x88,0x9a,0xa7,
+	0xa8,0xa7,0x66,0x66,0x66,
+	0x56,0x55,0x55
+};
+
+//0x00 0x00
+static char cabc_c6_G9[] = {
+	0xc6,
+	0x18,
+};
+static char cabc_c7_G9[] = {
+	0xC7,
+	0xf0,0x87,0x9a,0x9b,0x8a,
+	0xa9,0xa8,0x88,0xa9,0x87,
+	0x9a,0x88,0x89,0x67,0x56,
+	0x55,0x55,0x55
+};
+
+//0x00 0x00
+static char cabc_c6_G10[] = {
+	0xc6,
+	0x19,
+};
+static char cabc_c7_G10[] = {
+	0xC7,
+	0xe0,0x97,0x8a,0x9b,0x8a,
+	0x99,0x99,0x98,0xa8,0x87,
+	0x8a,0x79,0x8a,0x67,0x66,
+	0x56,0x55,0x55
+};
+
+//0x00 0x00
+static char cabc_c6_G11[] = {
+	0xc6,
+	0x1a,
+};
+static char cabc_c7_G11[] = {
+	0xC7,
+	0xe0,0xa6,0x89,0xaa,0xa9,
+	0x98,0x8a,0x88,0x89,0x79,
+	0x7a,0x7a,0x98,0x78,0x66,
+	0x66,0x56,0x45
+};
+
+//0x00 0x00
+static char cabc_c6_G12[] = {
+	0xc6,
+	0x1b,
+};
+static char cabc_c7_G12[] = {
+	0xC7,
+	0xb0,0x99,0x99,0x99,0x9a,
+	0x98,0x88,0x88,0x89,0x88,
+	0x98,0x79,0x88,0x8a,0x67,
+	0x66,0x66,0x55
+};
+
+//0x00 0x00
+static char cabc_c6_G13[] = {
+	0xc6,
+	0x1c,
+};
+static char cabc_c7_G13[] = {
+	0xC7,
+	0xe0,0x96,0x89,0x9a,0x89,
+	0xb7,0x88,0x88,0x88,0x88,
+	0x88,0x89,0x87,0xa8,0x98,
+	0x58,0x55,0x55
+};
+
+//0x00 0x00
+static char cabc_c6_G14[] = {
+	0xc6,
+	0x1d,
+};
+static char cabc_c7_G14[] = {
+	0xC7,
+	0xc0,0x88,0x89,0x99,0x8a,
+	0xa7,0x89,0x88,0x88,0x97,
+	0x97,0x97,0x78,0x98,0x79,
+	0xa8,0x48,0x34
+};
+
+//0x00 0x00
+static char cabc_c6_G15[] = {
+	0xc6,
+	0x1e,
+};
+static char cabc_c7_G15[] = {
+	0xC7,
+	0xc0,0x88,0x89,0x99,0x8a,
+	0xa7,0x89,0x88,0x88,0x97,
+	0x97,0x97,0x78,0x98,0x79,
+	0xa8,0x48,0x34
+};
+
+//0x00 0x00
+static char cabc_c6_G16[] = {
+	0xc6,
+	0x1f,
+};
+static char cabc_c7_G16[] = {
+	0xC7,
+	0xc0,0x88,0x89,0x99,0x8a,
+	0xa7,0x89,0x88,0x88,0x97,
+	0x97,0x97,0x78,0x98,0x79,
+	0xa8,0x48,0x34
+};
+
+static char cabc_shift_UI[] = {
+	0x00,
+	0x90,
+};
+
+static char cabc_UI_mode[] = {
+	0xCA,
+	0xE6, 0xFF,
+};
+
+static char cabc_shift_STILL[] = {
+	0x00,
+	0x92,
+};
+
+static char cabc_STILL_mode[] = {
+	0xCA,
+	0xA5, 0xFF,
+};
+
+static char cabc_shift_moving[] = {
+	0x00,
+	0x94,
+};
+
+static char cabc_moving_mode[] = {
+	0xCA,
+	0x80, 0xFF,
+};
+
+//0x00 0x00
+static char cabc_disable_curve[] = {
+	0xc6,
+	0x00,
+};
+
+//0x00 0x00
+static char cabc_disable_setting[] = {
+	0x59,
+	0x00,
+};
+
+static char cabc_53[] = {
+	0x53,
+	0x2c,
+};
+static char cabc_set_mode_UI[] = {
+	0x55,
+	0x91,
+};
+/*static char cabc_set_mode_STILL[] = {
+	0x55,
+	0x92,
+};*/
+static char cabc_set_mode_MOVING[] = {
+	0x55,
+	0x93,
+};
+
+/*******************************************************************************
+** Power OFF Sequence(Normal to power off)
+*/
+static char exit_sleep[] = {
+	0x11,
+};
+
+static char display_on[] = {
+	0x29,
+};
+
+static char display_off[] = {
+	0x28,
+};
+
+static char enter_sleep[] = {
+	0x10,
+};
+
+static char Delay_TE[] = {
+	0x44,
+	0x07, 0x80,
+};
+
+/*static char soft_reset[] = {
+	0x01,
+};*/
+
+static char clever_edge_shift[] = {
+	0x00,
+	0x81,
+};
+
+static char clever_edge_value[] = {
+	0xc0,
+	0x73,
+};
+
+#if 1
+static char for_b5_disturb_shift1[] = {
+	0x00,
+	0x82,
+};
+static char for_b5_disturb_value1[] = {
+	0xc4,
+	0x00,
+};
+static char for_b5_disturb_shift2[] = {
+	0x00,
+	0x83,
+};
+static char for_b5_disturb_value2[] = {
+	0xc4,
+	0x02,
+};
+static char for_b5_disturb_shift3[] = {
+	0x00,
+	0x80,
+};
+static char for_b5_disturb_value3[] = {
+	0xa5,
+	0x0c,
+};
+static char for_b5_disturb_shift4[] = {
+	0x00,
+	0x81,
+};
+static char for_b5_disturb_value4[] = {
+	0xa5,
+	0x04,
+};
+static char for_b5_disturb_shift5[] = {
+	0x00,
+	0x83,
+};
+static char for_b5_disturb_value5[] = {
+	0xa4,
+	0x20,
+};
+static char for_b5_disturb_shift6[] = {
+	0x00,
+	0x89,
+};
+static char for_b5_disturb_value6[] = {
+	0xa4,
+	0x00,
+};
+static char for_b5_disturb_shift7[] = {
+	0x00,
+	0xe2,
+};
+static char for_b5_disturb_value7[] = {
+	0xf5,
+	0x02,
+};
+#endif
+
+static struct dsi_cmd_desc jdi_display_on_cmd[] = {
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cmd2_ena1), cmd2_ena1},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft2), adrsft2},
+	{10, WAIT_TYPE_US,
+		sizeof(cmd2_ena2), cmd2_ena2},
+	//CE
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(orise_clever_mode), orise_clever_mode},
+	{10, WAIT_TYPE_US,
+		sizeof(addr_shift_a0), addr_shift_a0},
+	{10, WAIT_TYPE_US,
+		sizeof(ce_d6_1), ce_d6_1},
+	{10, WAIT_TYPE_US,
+		sizeof(addr_shift_b0), addr_shift_b0},
+	{10, WAIT_TYPE_US,
+		sizeof(ce_d6_2), ce_d6_2},
+	{10, WAIT_TYPE_US,
+		sizeof(addr_shift_c0), addr_shift_c0},
+	{10, WAIT_TYPE_US,
+		sizeof(ce_d6_3), ce_d6_3},
+	{10, WAIT_TYPE_US,
+		sizeof(addr_shift_d0), addr_shift_d0},
+	{10, WAIT_TYPE_US,
+		sizeof(ce_d6_4), ce_d6_4},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft2), adrsft2},
+	{10, WAIT_TYPE_US,
+		sizeof(ce_cmd), ce_cmd},
+	//sharpness
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(sp_cmd), sp_cmd},
+	{10, WAIT_TYPE_US,
+		sizeof(sp_shift_0x90), sp_shift_0x90},
+	{10, WAIT_TYPE_US,
+		sizeof(sp_D7_1), sp_D7_1},
+	{10, WAIT_TYPE_US,
+		sizeof(sp_shift_0x92), sp_shift_0x92},
+	{10, WAIT_TYPE_US,
+		sizeof(sp_D7_2), sp_D7_2},
+	{10, WAIT_TYPE_US,
+		sizeof(sp_shift_0x93), sp_shift_0x93},
+	{10, WAIT_TYPE_US,
+		sizeof(sp_D7_3), sp_D7_3},
+	//cabc
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft2), adrsft2},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_ca), cabc_ca},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G1), cabc_c6_G1},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G1), cabc_c7_G1},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G2), cabc_c6_G2},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G2), cabc_c7_G2},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G3), cabc_c6_G3},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G3), cabc_c7_G3},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G4), cabc_c6_G4},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G4), cabc_c7_G4},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G5), cabc_c6_G5},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G5), cabc_c7_G5},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G6), cabc_c6_G6},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G6), cabc_c7_G6},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G7), cabc_c6_G7},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G7), cabc_c7_G7},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G8), cabc_c6_G8},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G8), cabc_c7_G8},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G9), cabc_c6_G9},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G9), cabc_c7_G9},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G10), cabc_c6_G10},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G10), cabc_c7_G10},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G11), cabc_c6_G11},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G11), cabc_c7_G11},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G12), cabc_c6_G12},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G12), cabc_c7_G12},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G13), cabc_c6_G13},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G13), cabc_c7_G13},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G14), cabc_c6_G14},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G14), cabc_c7_G14},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G15), cabc_c6_G15},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G15), cabc_c7_G15},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c6_G16), cabc_c6_G16},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_c7_G16), cabc_c7_G16},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_shift_UI), cabc_shift_UI},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_UI_mode), cabc_UI_mode},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_shift_STILL), cabc_shift_STILL},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_STILL_mode), cabc_STILL_mode},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_shift_moving), cabc_shift_moving},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_moving_mode), cabc_moving_mode},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_disable_curve), cabc_disable_curve},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft1), adrsft1},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_disable_setting), cabc_disable_setting},
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_53), cabc_53},
+	{1, WAIT_TYPE_MS,
+		sizeof(adrsft3), adrsft3},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft4), adrsft4},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft5), adrsft5},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft6), adrsft6},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft7), adrsft7},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft8), adrsft8},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft9), adrsft9},
+	{10, WAIT_TYPE_US,
+		sizeof(pixel_eyes_setting), pixel_eyes_setting},
+	{10, WAIT_TYPE_US,
+		sizeof(adrsft10), adrsft10},
+};
+
+static struct dsi_cmd_desc jdi_display_on_cmd1[] = {
+	{10, WAIT_TYPE_US,
+		sizeof(tear_on), tear_on},
+	//{10, WAIT_TYPE_US,
+	//	sizeof(caset_data), caset_data},
+	//{10, WAIT_TYPE_US,
+	//	sizeof(paset_data), paset_data},
+	{200, WAIT_TYPE_US,
+		sizeof(bl_enable), bl_enable},
+	{200, WAIT_TYPE_US,
+		sizeof(Delay_TE), Delay_TE},
+	{10, WAIT_TYPE_US,
+		sizeof(clever_edge_shift), clever_edge_shift},
+	{10, WAIT_TYPE_US,
+		sizeof(clever_edge_value), clever_edge_value},
+	{10, WAIT_TYPE_MS,
+		sizeof(exit_sleep), exit_sleep},
+	{100, WAIT_TYPE_MS,
+		sizeof(display_on), display_on},
+#if 1
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_shift7), for_b5_disturb_shift1},
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_value7), for_b5_disturb_value1},
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_shift7), for_b5_disturb_shift2},
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_value7), for_b5_disturb_value2},
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_shift7), for_b5_disturb_shift3},
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_value7), for_b5_disturb_value3},
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_shift7), for_b5_disturb_shift4},
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_value7), for_b5_disturb_value4},
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_shift7), for_b5_disturb_shift5},
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_value7), for_b5_disturb_value5},
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_shift7), for_b5_disturb_shift6},
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_value7), for_b5_disturb_value6},
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_shift7), for_b5_disturb_shift7},
+	{200, WAIT_TYPE_US,
+		sizeof(for_b5_disturb_value7), for_b5_disturb_value7},
+#endif
+};
+
+static struct dsi_cmd_desc jdi_cabc_ui_on_cmds[] = {
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_set_mode_UI), cabc_set_mode_UI},
+};
+
+/*static struct dsi_cmd_desc jdi_cabc_still_on_cmds[] = {
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_set_mode_STILL), cabc_set_mode_STILL},
+};*/
+
+static struct dsi_cmd_desc jdi_cabc_moving_on_cmds[] = {
+	{10, WAIT_TYPE_US,
+		sizeof(cabc_set_mode_MOVING), cabc_set_mode_MOVING},
+};
+static struct dsi_cmd_desc jdi_display_off_cmds[] = {
+	{60, WAIT_TYPE_MS,
+		sizeof(display_off), display_off},
+	{120, WAIT_TYPE_MS,
+		sizeof(enter_sleep), enter_sleep}
+};
+
+static char command_2_enable[] = {
+	0x00,
+	0x00,
+};
+
+static char command_2_enable_1_para[] = {
+	0xFF,
+	0x19, 0x02, 0x01,
+};
+
+static char command_2_enable_2[] = {
+	0x00,
+	0x80,
+};
+
+static char command_2_enable_2_para[] = {
+	0xFF,
+	0x19, 0x02,
+};
+
+static char HD720_setting_1_para[] = {
+	0x2A,
+	0x00, 0x00, 0x02, 0xCF,
+};
+
+static char HD1080_setting_1_para[] = {
+	0x2a,
+	0x00, 0x00, 0x04, 0x37,
+};
+
+static char HD720_setting_2_para[] = {
+	0x2B,
+	0x00, 0x00, 0x04, 0xFF,
+};
+
+static char HD1080_setting_2_para[] = {
+	0x2b,
+	0x00, 0x00, 0x07, 0x7f,
+};
+
+static char cleveredge_1_5x_para[] = {
+	0x1C,
+	0x05,
+};
+
+static char cleveredge_disable[] = {
+	0x1C,
+	0x00,
+};
+
+static char cleveredge_P1[] = {
+	0x00,
+	0x91,
+};
+
+static char cleveredge_P1_para[] = {
+	0xD7,
+	0xC8,
+};
+
+static char cleveredge_P2[] = {
+	0x00,
+	0x93,
+};
+
+static char cleveredge_P2_para[] = {
+	0xD7,
+	0x08,
+};
+
+static char cleveredge_use_setting[] = {
+	0x00,
+	0xAC,
+};
+
+static char cleveredge_use_setting_para[] = {
+	0xC0,
+	0x04,
+};
+
+static char command_2_disable_para[] = {
+	0xFF,
+	0xFF, 0xFF, 0xFF, 0xFF,
+};
+
+static char command_clevermode[] = {
+	0x59,
+	0x03,
+};
+
+#if 0
+static struct dsi_cmd_desc cleveredge_inital_720P_cmds[] = {
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable), command_2_enable},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable_1_para), command_2_enable_1_para},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable_2), command_2_enable_2},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable_2_para), command_2_enable_2_para},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable), command_2_enable},
+	{100, WAIT_TYPE_US,
+		sizeof(command_clevermode), command_clevermode},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable), command_2_enable},
+	{100, WAIT_TYPE_US,
+		sizeof(HD720_setting_1_para), HD720_setting_1_para},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable), command_2_enable},
+	{100, WAIT_TYPE_US,
+		sizeof(HD720_setting_2_para), HD720_setting_2_para},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable), command_2_enable},
+	{100, WAIT_TYPE_US,
+		sizeof(cleveredge_1_5x_para), cleveredge_1_5x_para},
+	{100, WAIT_TYPE_US,
+		sizeof(cleveredge_P1), cleveredge_P1},
+	{100, WAIT_TYPE_US,
+		sizeof(cleveredge_P1_para), cleveredge_P1_para},
+	{100, WAIT_TYPE_US,
+		sizeof(cleveredge_P2), cleveredge_P2},
+	{100, WAIT_TYPE_US,
+		sizeof(cleveredge_P2_para), cleveredge_P2_para},
+	{100, WAIT_TYPE_US,
+		sizeof(cleveredge_use_setting), cleveredge_use_setting},
+	{100, WAIT_TYPE_US,
+		sizeof(cleveredge_use_setting_para), cleveredge_use_setting_para},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable), command_2_enable},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_disable_para), command_2_disable_para}
+};
+#endif
+
+static struct dsi_cmd_desc cleveredge_inital_1080P_cmds[] = {
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable), command_2_enable},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable_1_para), command_2_enable_1_para},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable_2), command_2_enable_2},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable_2_para), command_2_enable_2_para},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable), command_2_enable},
+	{100, WAIT_TYPE_US,
+		sizeof(HD1080_setting_1_para), HD1080_setting_1_para},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable), command_2_enable},
+	{100, WAIT_TYPE_US,
+		sizeof(HD1080_setting_2_para), HD1080_setting_2_para},
+	{100, WAIT_TYPE_US,
+		sizeof(command_2_enable), command_2_enable},
+	{100, WAIT_TYPE_US,
+		sizeof(cleveredge_disable), cleveredge_disable},
+	{10, WAIT_TYPE_US,
+		sizeof(sp_shift_0x93), sp_shift_0x93},
+	{10, WAIT_TYPE_US,
+		sizeof(sp_D7_3), sp_D7_3},
+};
+
+
+
 
 static inline struct otm1920b *panel_to_otm1920b(struct drm_panel *panel)
 {
 	return container_of(panel, struct otm1920b, panel);
 }
 
-static int otm1920b_switch_page(struct otm1920b *ctx, u8 page)
+static int mipi_dsi_cmds_tx(struct dsi_cmd_desc *cmds, int cnt, struct otm1920b *ctx)
 {
-	u8 buf[4] = { 0xff, 0x98, 0x81, page };
-	int ret;
+	int i;
+	struct dsi_cmd_desc *cm = cmds;
 
-	ret = mipi_dsi_dcs_write_buffer(ctx->dsi, buf, sizeof(buf));
-	if (ret < 0)
-		return ret;
+	for (i = 0; i < cnt; i++) {
+		mipi_dsi_dcs_write_buffer(ctx->dsi, cm->payload, cm->dlen);
 
-	return 0;
-}
+		if (cm->wait) {
+			if (cm->waittype == WAIT_TYPE_US)
+				udelay(cm->wait);
+			else if (cm->waittype == WAIT_TYPE_MS)
+				mdelay(cm->wait);
+			else
+				mdelay(cm->wait * 1000);
+		}
+		cm++;
+	}
 
-static int otm1920b_send_cmd_data(struct otm1920b *ctx, u8 cmd, u8 data)
-{
-	u8 buf[2] = { cmd, data };
-	int ret;
-
-	ret = mipi_dsi_dcs_write_buffer(ctx->dsi, buf, sizeof(buf));
-	if (ret < 0)
-		return ret;
-
-	return 0;
+	return cnt;
 }
 
 static int otm1920b_prepare(struct drm_panel *panel)
@@ -310,16 +1117,19 @@ static int otm1920b_prepare(struct drm_panel *panel)
 	struct otm1920b *ctx = panel_to_otm1920b(panel);
 
 	/* Power the panel */
-	if (!IS_ERR(ctx->power)) {
-		gpiod_set_value(ctx->power, 1);
-		msleep(5);
-	}
+	// if (!IS_ERR(ctx->power)) {
+	// 	gpiod_set_value(ctx->power, 1);
+	// 	msleep(5);
+	// }
 	/* And reset it */
 	if (!IS_ERR(ctx->reset)) {
-		gpiod_set_value(ctx->reset, 1);
+		gpiod_set_value(ctx->reset, 1); // High for > 15ms
 		msleep(20);
 
-		gpiod_set_value(ctx->reset, 0);
+		gpiod_set_value(ctx->reset, 0); // Low for > 20us
+		msleep(1);
+
+		gpiod_set_value(ctx->reset, 1); // Keep high & wait for > 10ms
 		msleep(20);
 	}
 
@@ -333,35 +1143,43 @@ static int otm1920b_enable(struct drm_panel *panel)
 	int ret;
 
 	ctx->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+	print_dbg("start pannel enable");
 
-	for (i = 0; i < ARRAY_SIZE(otm1920b_init); i++) {
-		struct otm1920b_instr *instr = &otm1920b_init[i];
+	if (!IS_ERR(ctx->reset)) {
+		print_dbg("reset LCD");
+		gpiod_set_value(ctx->reset, 1); // High for > 15ms
+		msleep(20);
 
-		if (instr->op == ILI9881C_SWITCH_PAGE)
-			ret = otm1920b_switch_page(ctx, instr->arg.page);
-		else if (instr->op == ILI9881C_COMMAND)
-			ret = otm1920b_send_cmd_data(ctx, instr->arg.cmd.cmd,
-						      instr->arg.cmd.data);
+		gpiod_set_value(ctx->reset, 0); // Low for > 20us
+		msleep(1);
 
-		if (ret)
-			return ret;
+		gpiod_set_value(ctx->reset, 1); // Keep high & wait for > 10ms
+		msleep(20);
 	}
 
-	ret = otm1920b_switch_page(ctx, 0);
-	if (ret)
-		return ret;
+	ret = mipi_dsi_cmds_tx(cleveredge_inital_1080P_cmds, ARRAY_SIZE(cleveredge_inital_1080P_cmds), ctx);
+	print_dbg("clever init 1080p done");
+	ret = mipi_dsi_cmds_tx(jdi_display_on_cmd, ARRAY_SIZE(jdi_display_on_cmd), ctx);
+	print_dbg("display on 0 done");
+	ret = mipi_dsi_cmds_tx(jdi_display_on_cmd1, ARRAY_SIZE(jdi_display_on_cmd1), ctx);
+	print_dbg("display on 1 done");
+	ret = mipi_dsi_cmds_tx(jdi_cabc_ui_on_cmds, ARRAY_SIZE(jdi_cabc_ui_on_cmds), ctx);
+	print_dbg("cabc ui on done");
 
-	ret = mipi_dsi_dcs_set_tear_on(ctx->dsi, MIPI_DSI_DCS_TEAR_MODE_VBLANK);
-	if (ret)
-		return ret;
+	// ret = mipi_dsi_dcs_set_tear_on(ctx->dsi, MIPI_DSI_DCS_TEAR_MODE_VBLANK);
+	// print_dbg("set tear on, ret %d", ret);
+	// if (ret)
+	// 	return ret;
 
-	ret = mipi_dsi_dcs_exit_sleep_mode(ctx->dsi);
-	if (ret)
-		return ret;
+	// ret = mipi_dsi_dcs_exit_sleep_mode(ctx->dsi);
+	// print_dbg("exit sleep mode, ret %d", ret);
+	// if (ret)
+	// 	return ret;
 
-	msleep(120);
+	// msleep(120);
 
-	mipi_dsi_dcs_set_display_on(ctx->dsi);
+	// mipi_dsi_dcs_set_display_on(ctx->dsi);
+	// print_dbg("dcs set display on");
 
 	return 0;
 }
@@ -370,6 +1188,9 @@ static int otm1920b_disable(struct drm_panel *panel)
 {
 	struct otm1920b *ctx = panel_to_otm1920b(panel);
 
+	mipi_dsi_cmds_tx(jdi_display_off_cmds, ARRAY_SIZE(jdi_display_off_cmds), ctx);
+	print_dbg("display off done");
+
 	return mipi_dsi_dcs_set_display_off(ctx->dsi);
 }
 
@@ -377,18 +1198,21 @@ static int otm1920b_unprepare(struct drm_panel *panel)
 {
 	struct otm1920b *ctx = panel_to_otm1920b(panel);
 
+	print_dbg("");
 	mipi_dsi_dcs_enter_sleep_mode(ctx->dsi);
-	if (!IS_ERR(ctx->power))
-		gpiod_set_value(ctx->power, 0);
+	// if (!IS_ERR(ctx->power))
+	// 	gpiod_set_value(ctx->power, 0);
 
+	// Keep LCD RESET low
 	if (!IS_ERR(ctx->reset))
-		gpiod_set_value(ctx->reset, 1);
+		gpiod_set_value(ctx->reset, 0);
 
 	return 0;
 }
 
+#if 0 // ILI9881
 static const struct drm_display_mode high_clk_mode = {
-	.clock		= 67500,
+	.clock		= 74250,
 	.vrefresh	= 60,
 	.hdisplay	= 720,
 	.hsync_start	= 720 + 34,
@@ -412,6 +1236,33 @@ static const struct drm_display_mode default_mode = {
 	.vsync_end	= 1280 + 10 + 10,
 	.vtotal		= 1280 + 10 + 10 + 20,
 };
+#else
+static const struct drm_display_mode high_clk_mode = {
+	.clock		= 74250,
+	.vrefresh	= 60,
+	.hdisplay	= 1080,
+	.hsync_start	= 1080 + 45,
+	.hsync_end	= 1080 + 45 + 140,
+	.htotal	= 1080 + 45 + 140 + 140,
+	.vdisplay	= 1920,
+	.vsync_start	= 1920 + 5,
+	.vsync_end	= 1920 + 5 + 50,
+	.vtotal	= 1920 + 5 + 50 + 40,
+};
+
+static const struct drm_display_mode default_mode = {
+	.clock		= 62000,
+	.vrefresh	= 60,
+	.hdisplay	= 1080,
+	.hsync_start	= 1080 + 10,
+	.hsync_end	= 1080 + 10 + 20,
+	.htotal		= 1080 + 10 + 20 + 30,
+	.vdisplay	= 1920,
+	.vsync_start	= 1920 + 10,
+	.vsync_end	= 1920 + 10 + 10,
+	.vtotal		= 1920 + 10 + 10 + 20,
+};
+#endif
 
 static int otm1920b_get_modes(struct drm_panel *panel)
 {
@@ -422,6 +1273,7 @@ static int otm1920b_get_modes(struct drm_panel *panel)
 	u32 bus_format = MEDIA_BUS_FMT_RGB888_1X24;
 	int ret;
 
+	print_dbg("timing mode: %d", ctx->timing_mode);
 	switch (ctx->timing_mode) {
 		case 0:
 			display_mode = &default_mode;
@@ -445,18 +1297,22 @@ static int otm1920b_get_modes(struct drm_panel *panel)
 	}
 
 	drm_mode_set_name(mode);
+	print_dbg("drm mode set done");
 
 	mode->type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
 
 	ret = drm_display_info_set_bus_formats(&connector->display_info,
 					       &bus_format, 1);
+	print_dbg("drm set bus ret %d, bus %d", ret, bus_format);
 	if (ret)
 		return ret;
 
 	drm_mode_probed_add(connector, mode);
 
-	panel->connector->display_info.width_mm = 62;
-	panel->connector->display_info.height_mm = 110;
+	panel->connector->display_info.width_mm = 64;
+	panel->connector->display_info.height_mm = 116;
+	print_dbg("drm probed, width %d, height %d", panel->connector->display_info.width_mm, 
+		panel->connector->display_info.height_mm);
 
 	return 1;
 }
@@ -489,11 +1345,11 @@ static int otm1920b_dsi_probe(struct mipi_dsi_device *dsi)
 	ctx->panel.dev = &dsi->dev;
 	ctx->panel.funcs = &otm1920b_funcs;
 
-	ctx->power = devm_gpiod_get(&dsi->dev, "power", GPIOD_OUT_LOW);
-	if (IS_ERR(ctx->power)) {
-		print_err("Couldn't get our power GPIO");
-	}
-	print_dbg("power gpio ok");
+	// ctx->power = devm_gpiod_get(&dsi->dev, "power", GPIOD_OUT_LOW);
+	// if (IS_ERR(ctx->power)) {
+	// 	print_err("Couldn't get our power GPIO");
+	// }
+	// print_dbg("power gpio ok");
 
 	ctx->reset = devm_gpiod_get(&dsi->dev, "reset", GPIOD_OUT_LOW);
 	if (IS_ERR(ctx->reset)) {
@@ -570,6 +1426,6 @@ static struct mipi_dsi_driver otm1920b_dsi_driver = {
 };
 module_mipi_dsi_driver(otm1920b_dsi_driver);
 
-MODULE_AUTHOR("Maxime Ripard <maxime.ripard@free-electrons.com>");
-MODULE_DESCRIPTION("Ilitek ILI9881C Controller Driver");
+MODULE_AUTHOR("Linh Nguyen <nvl1109@gmail.com>");
+MODULE_DESCRIPTION("JDI TPM0501010P Controller Driver");
 MODULE_LICENSE("GPL v2");
