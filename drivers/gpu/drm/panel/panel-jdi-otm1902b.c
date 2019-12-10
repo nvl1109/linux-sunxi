@@ -43,6 +43,7 @@ struct otm1920b {
 
 	// struct gpio_desc	*power;
 	struct gpio_desc	*reset;
+	struct gpio_desc	*tpreset;
 	u32	timing_mode;
 };
 
@@ -1126,7 +1127,16 @@ static int otm1920b_prepare(struct drm_panel *panel)
 	// 	msleep(5);
 	// }
 	/* And reset it */
+
+	if (!IS_ERR(ctx->tpreset)) {
+		print_dbg("reset Touch");
+		gpiod_set_value(ctx->tpreset, 0);
+		msleep(5);
+		gpiod_set_value(ctx->tpreset, 1);
+		msleep(5);
+	}
 	if (!IS_ERR(ctx->reset)) {
+		print_dbg("reset Panel");
 		gpiod_set_value(ctx->reset, 1); // High for > 15ms
 		msleep(20);
 
@@ -1149,17 +1159,24 @@ static int otm1920b_enable(struct drm_panel *panel)
 	ctx->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 	print_dbg("start pannel enable");
 
-	if (!IS_ERR(ctx->reset)) {
-		print_dbg("reset LCD");
-		gpiod_set_value(ctx->reset, 1); // High for > 15ms
-		msleep(20);
+	// if (!IS_ERR(ctx->tpreset)) {
+	// 	print_dbg("reset Touch");
+	// 	gpiod_set_value(ctx->tpreset, 0);
+	// 	msleep(5);
+	// 	gpiod_set_value(ctx->tpreset, 1);
+	// 	msleep(5);
+	// }
+	// if (!IS_ERR(ctx->reset)) {
+	// 	print_dbg("reset LCD");
+	// 	gpiod_set_value(ctx->reset, 1); // High for > 15ms
+	// 	msleep(20);
 
-		gpiod_set_value(ctx->reset, 0); // Low for > 20us
-		msleep(1);
+	// 	gpiod_set_value(ctx->reset, 0); // Low for > 20us
+	// 	msleep(1);
 
-		gpiod_set_value(ctx->reset, 1); // Keep high & wait for > 10ms
-		msleep(20);
-	}
+	// 	gpiod_set_value(ctx->reset, 1); // Keep high & wait for > 10ms
+	// 	msleep(20);
+	// }
 
 	ret = mipi_dsi_cmds_tx(cleveredge_inital_1080P_cmds, ARRAY_SIZE(cleveredge_inital_1080P_cmds), ctx);
 	print_dbg("clever init 1080p done");
@@ -1214,8 +1231,14 @@ static int otm1920b_unprepare(struct drm_panel *panel)
 	// 	gpiod_set_value(ctx->power, 0);
 
 	// Keep LCD RESET low
-	if (!IS_ERR(ctx->reset))
+	if (!IS_ERR(ctx->reset)) {
+		print_dbg("poweroff Panel");
 		gpiod_set_value(ctx->reset, 0);
+	}
+	if (!IS_ERR(ctx->tpreset)) {
+		print_dbg("poweroff Touch");
+		gpiod_set_value(ctx->tpreset, 0);
+	}
 
 	return 0;
 }
@@ -1248,16 +1271,16 @@ static const struct drm_display_mode default_mode = {
 };
 #else
 static const struct drm_display_mode high_clk_mode = {
-	.clock		= 74250,
-	.vrefresh	= 60,
-	.hdisplay	= 1080,
-	.hsync_start	= 1080 + 45,
-	.hsync_end	= 1080 + 45 + 140,
-	.htotal	= 1080 + 45 + 140 + 140,
-	.vdisplay	= 1920,
-	.vsync_start	= 1920 + 5,
-	.vsync_end	= 1920 + 5 + 50,
-	.vtotal	= 1920 + 5 + 50 + 40,
+	.clock = 148500,
+	.vrefresh = 60,
+	.hdisplay = 1080,
+	.hsync_start = 1080 + 70,
+	.hsync_end = 1080 + 70 + 1,
+	.htotal = 1080 + 70 + 1 + 50,
+	.vdisplay = 1920,
+	.vsync_start = 1920 + 35,
+	.vsync_end = 1920 + 35 + 1,
+	.vtotal = 1920 + 35 + 1 + 25,
 };
 
 static const struct drm_display_mode default_mode = {
@@ -1360,6 +1383,11 @@ static int otm1920b_dsi_probe(struct mipi_dsi_device *dsi)
 	// 	print_err("Couldn't get our power GPIO");
 	// }
 	// print_dbg("power gpio ok");
+	ctx->tpreset = devm_gpiod_get(&dsi->dev, "tpreset", GPIOD_OUT_LOW);
+	if (IS_ERR(ctx->tpreset)) {
+		print_err("Couldn't get our tpreset GPIO");
+	}
+	print_dbg("tpreset gpio ok");
 
 	ctx->reset = devm_gpiod_get(&dsi->dev, "reset", GPIOD_OUT_LOW);
 	if (IS_ERR(ctx->reset)) {

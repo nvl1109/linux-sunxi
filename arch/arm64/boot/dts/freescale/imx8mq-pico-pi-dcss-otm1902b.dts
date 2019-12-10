@@ -88,8 +88,9 @@
 
 	panel@0 {
 		compatible = "jdi,otm1902b";
-		pinctrl-0 = <&pinctrl_mipi_dsi_rst>;
-		reset-gpio = <&gpio1 8 GPIO_ACTIVE_LOW>;
+		pinctrl-0 = <&pinctrl_mipi_dsi_rst &pinctrl_touch_rst>;
+		reset-gpio = <&gpio3 17 GPIO_ACTIVE_LOW>;
+		tpreset-gpio = <&gpio3 18 GPIO_ACTIVE_LOW>;
 		reg = <0>;
 		timing-mode = <1>;
 		video-mode = <1>;	/* 0: burst mode
@@ -107,6 +108,35 @@
 	port@1 {
 		mipi_dsi_bridge_out: endpoint {
 			remote-endpoint = <&panel1_in>;
+		};
+	};
+};
+
+&i2c3 {
+	synaptics@2c {
+		compatible = "syna,rmi4-i2c";
+		reg = <0x20>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		interrupt-parent = <&gpio1>;
+		interrupts = <7 IRQ_TYPE_EDGE_FALLING>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_touch_irq>;
+
+		syna,startup-delay-ms = <10>;
+
+		/*rmi4-f01@1 {
+			reg = <0x1>;
+			syna,nosleep-mode = <1>;
+		};*/
+
+		rmi4-f11@11 {
+			reg = <0x11>;
+			touchscreen-inverted-x;
+			syna,sensor-type = <1>;
 		};
 	};
 };
