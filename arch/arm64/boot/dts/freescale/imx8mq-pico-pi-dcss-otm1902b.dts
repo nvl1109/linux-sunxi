@@ -26,6 +26,7 @@
 
 	backlight_mipi {
 		status = "okay";
+		default-brightness-level = <6>;
 	};
 };
 
@@ -88,7 +89,7 @@
 	panel@0 {
 		compatible = "jdi,otm1902b";
 		pinctrl-0 = <&pinctrl_mipi_dsi_rst>;
-		reset-gpio = <&gpio3 17 GPIO_ACTIVE_LOW>;
+		reset-gpio = <&gpio1 8 GPIO_ACTIVE_LOW>;
 		reg = <0>;
 		timing-mode = <1>;
 		video-mode = <1>;	/* 0: burst mode

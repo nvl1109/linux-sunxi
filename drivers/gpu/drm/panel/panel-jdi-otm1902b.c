@@ -1093,10 +1093,14 @@ static inline struct otm1920b *panel_to_otm1920b(struct drm_panel *panel)
 static int mipi_dsi_cmds_tx(struct dsi_cmd_desc *cmds, int cnt, struct otm1920b *ctx)
 {
 	int i;
+	int ret;
 	struct dsi_cmd_desc *cm = cmds;
 
 	for (i = 0; i < cnt; i++) {
-		mipi_dsi_dcs_write_buffer(ctx->dsi, cm->payload, cm->dlen);
+		ret = mipi_dsi_dcs_write_buffer(ctx->dsi, cm->payload, cm->dlen);
+		if (ret < 0) {
+			print_err("dsi write buf %dbytes failed, %d", cm->dlen, ret);
+		}
 
 		if (cm->wait) {
 			if (cm->waittype == WAIT_TYPE_US)
@@ -1139,7 +1143,7 @@ static int otm1920b_prepare(struct drm_panel *panel)
 static int otm1920b_enable(struct drm_panel *panel)
 {
 	struct otm1920b *ctx = panel_to_otm1920b(panel);
-	unsigned int i;
+	u16 tmp;
 	int ret;
 
 	ctx->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
@@ -1180,6 +1184,12 @@ static int otm1920b_enable(struct drm_panel *panel)
 
 	// mipi_dsi_dcs_set_display_on(ctx->dsi);
 	// print_dbg("dcs set display on");
+
+	// ret = mipi_dsi_dcs_get_display_brightness(ctx->dsi, &tmp);
+	// print_dbg("brightness %u, ret %d", tmp, ret);
+
+	// ret = mipi_dsi_dcs_set_display_brightness(ctx->dsi, 28);
+	// print_dbg("Set brightness to 128, ret %d", ret);
 
 	return 0;
 }
