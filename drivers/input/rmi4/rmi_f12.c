@@ -11,6 +11,8 @@
 #include "rmi_driver.h"
 #include "rmi_2d_sensor.h"
 
+#include "linhdebug.h"
+
 enum rmi_f12_object_type {
 	RMI_F12_OBJECT_NONE			= 0x00,
 	RMI_F12_OBJECT_FINGER			= 0x01,
@@ -297,6 +299,8 @@ static int rmi_f12_config(struct rmi_function *fn)
 {
 	struct rmi_driver *drv = fn->rmi_dev->driver;
 	int ret;
+
+	print_dbg("");
 
 	drv->set_irq_bits(fn->rmi_dev, fn->irq_mask);
 

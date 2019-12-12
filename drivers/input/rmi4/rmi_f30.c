@@ -12,6 +12,8 @@
 #include <linux/slab.h>
 #include "rmi_driver.h"
 
+#include "linhdebug.h"
+
 #define RMI_F30_QUERY_SIZE			2
 
 /* Defs for Query 0 */
@@ -169,6 +171,8 @@ static int rmi_f30_config(struct rmi_function *fn)
 	const struct rmi_device_platform_data *pdata =
 				rmi_get_platform_data(fn->rmi_dev);
 	int error;
+
+	print_dbg("");
 
 	/* can happen if f30_data.disable is set */
 	if (!f30)

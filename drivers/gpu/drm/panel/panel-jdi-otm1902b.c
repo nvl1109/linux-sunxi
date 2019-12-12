@@ -18,6 +18,7 @@
 #include <drm/drm_mipi_dsi.h>
 #include <drm/drm_modes.h>
 #include <drm/drm_panel.h>
+#include <video/videomode.h>
 
 #include <video/mipi_display.h>
 
@@ -1195,58 +1196,84 @@ static int otm1920b_unprepare(struct drm_panel *panel)
 }
 
 #if 0 // ILI9881
-static const struct drm_display_mode high_clk_mode = {
-	.clock		= 74250,
-	.vrefresh	= 60,
-	.hdisplay	= 720,
-	.hsync_start	= 720 + 34,
-	.hsync_end	= 720 + 34 + 100,
-	.htotal	= 720 + 34 + 100 + 100,
-	.vdisplay	= 1280,
-	.vsync_start	= 1280 + 2,
-	.vsync_end	= 1280 + 2 + 30,
-	.vtotal	= 1280 + 2 + 30 + 20,
+static const struct drm_display_mode default_mode = {
+	.clock          = 74250,
+	.vrefresh       = 60,
+	.hdisplay       = 1080,
+	.hsync_start    = 1080 + 45,
+	.hsync_end      = 1080 + 45 + 140,
+	.htotal = 1080 + 45 + 140 + 140,
+	.vdisplay       = 1920,
+	.vsync_start    = 1920 + 5,
+	.vsync_end      = 1920 + 5 + 50,
+	.vtotal = 1920 + 5 + 50 + 40,
 };
 
-static const struct drm_display_mode default_mode = {
-	.clock		= 62000,
-	.vrefresh	= 60,
-	.hdisplay	= 720,
-	.hsync_start	= 720 + 10,
-	.hsync_end	= 720 + 10 + 20,
-	.htotal		= 720 + 10 + 20 + 30,
-	.vdisplay	= 1280,
-	.vsync_start	= 1280 + 10,
-	.vsync_end	= 1280 + 10 + 10,
-	.vtotal		= 1280 + 10 + 10 + 20,
-};
 #else
-static const struct drm_display_mode high_clk_mode = {
+// From raydium-rm67191
+// static const struct drm_display_mode default_mode = {
+// 	.clock = 132000,
+// 	.hdisplay = 1080,
+// 	.hsync_start = 1080 + 20,
+// 	.hsync_end =  1080 + 20 + 2,
+// 	.htotal = 1080 + 20 + 2 + 34,
+// 	.vdisplay = 1920,
+// 	.vsync_start = 1920 + 10,
+// 	.vsync_end = 1920 + 10 + 2,
+// 	.vtotal = 1920 + 10 + 2 + 4,
+// 	.vrefresh = 60,
+// 	.flags = 0,
+// };
+
+// From android OTM1920B
+static const struct drm_display_mode default_mode = {
 	.clock = 148500,
-	.vrefresh = 60,
-	.hdisplay = 1080,
-	.hsync_start = 1080 + 70,
-	.hsync_end = 1080 + 70 + 1,
-	.htotal = 1080 + 70 + 1 + 50,
-	.vdisplay = 1920,
-	.vsync_start = 1920 + 35,
-	.vsync_end = 1920 + 35 + 1,
-	.vtotal = 1920 + 35 + 1 + 25,
+	// .hdisplay = 1080,
+	// .hsync_start = 1080 + 50,
+	// .hsync_end =  1080 + 50 + 20,
+	// .htotal = 1080 + 50 + 20 + 23,
+	// .vdisplay = 1920,
+	// .vsync_start = 1920 + 14,
+	// .vsync_end = 1920 + 14 + 4,
+	// .vtotal = 1920 + 14 + 4 + 12,
+	// .vrefresh = 60,
+	// .flags = 0,
+	
+
+	.hdisplay	= 1080,
+	.hsync_start	= 1080 + 408,
+	.hsync_end	= 1080 + 408 + 4,
+	.htotal		= 1080 + 408 + 4 + 38,
+
+	.vdisplay	= 1920,
+	.vsync_start	= 1920 + 9,
+	.vsync_end	= 1920 + 9 + 12,
+	.vtotal		= 1920 + 9 + 12 + 9,
+	.vrefresh	= 50,
+
+	.width_mm	= 64,
+	.height_mm	= 116,
+
+	.type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED,
 };
 
-static const struct drm_display_mode default_mode = {
-	.clock		= 62000,
-	.vrefresh	= 60,
-	.hdisplay	= 1080,
-	.hsync_start	= 1080 + 10,
-	.hsync_end	= 1080 + 10 + 20,
-	.htotal		= 1080 + 10 + 20 + 30,
-	.vdisplay	= 1920,
-	.vsync_start	= 1920 + 10,
-	.vsync_end	= 1920 + 10 + 10,
-	.vtotal		= 1920 + 10 + 10 + 20,
-};
 #endif
+
+// struct videomode default_vmmode = {
+// 	.pixelclock = 132000000,
+// 	.hactive = 1080,
+// 	.vactive = 1920,
+// 	.hfront_porch = 20,
+// 	.hsync_len = 2,
+// 	.hback_porch = 34,
+// 	.vfront_porch = 10,
+// 	.vsync_len = 2,
+// 	.vback_porch = 4,
+// 	.flags = DISPLAY_FLAGS_HSYNC_LOW |
+// 		 DISPLAY_FLAGS_VSYNC_LOW |
+// 		 DISPLAY_FLAGS_DE_LOW |
+// 		 DISPLAY_FLAGS_PIXDATA_NEGEDGE,
+// };
 
 static int otm1920b_get_modes(struct drm_panel *panel)
 {
@@ -1257,20 +1284,8 @@ static int otm1920b_get_modes(struct drm_panel *panel)
 	u32 bus_format = MEDIA_BUS_FMT_RGB888_1X24;
 	int ret;
 
+	display_mode = &default_mode;
 	print_dbg("timing mode: %d", ctx->timing_mode);
-	switch (ctx->timing_mode) {
-		case 0:
-			display_mode = &default_mode;
-			break;
-		case 1:
-			display_mode = &high_clk_mode;
-			break;
-		default:
-			print_warn("invalid timing mode %d, fail back to use default mode", ctx->timing_mode);
-			display_mode = &default_mode;
-			break;
-
-	}
 
 	mode = drm_mode_duplicate(panel->drm, display_mode);
 	if (!mode) {
@@ -1285,6 +1300,9 @@ static int otm1920b_get_modes(struct drm_panel *panel)
 
 	mode->type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
 
+	panel->connector->display_info.width_mm = mode->width_mm;
+	panel->connector->display_info.height_mm = mode->height_mm;
+
 	ret = drm_display_info_set_bus_formats(&connector->display_info,
 					       &bus_format, 1);
 	print_dbg("drm set bus ret %d, bus %d", ret, bus_format);
@@ -1292,11 +1310,6 @@ static int otm1920b_get_modes(struct drm_panel *panel)
 		return ret;
 
 	drm_mode_probed_add(connector, mode);
-
-	panel->connector->display_info.width_mm = 64;
-	panel->connector->display_info.height_mm = 116;
-	print_dbg("drm probed, width %d, height %d", panel->connector->display_info.width_mm, 
-		panel->connector->display_info.height_mm);
 
 	return 1;
 }

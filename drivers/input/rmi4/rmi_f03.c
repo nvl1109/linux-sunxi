@@ -13,6 +13,8 @@
 #include <linux/notifier.h>
 #include "rmi_driver.h"
 
+#include "linhdebug.h"
+
 #define RMI_F03_RX_DATA_OFB		0x01
 #define RMI_F03_OB_SIZE			2
 
@@ -225,6 +227,8 @@ static int rmi_f03_config(struct rmi_function *fn)
 {
 	struct f03_data *f03 = dev_get_drvdata(&fn->dev);
 	int error;
+
+	print_dbg("");
 
 	if (!f03->serio_registered) {
 		error = rmi_f03_register_pt(f03);

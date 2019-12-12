@@ -18,6 +18,8 @@
 #include "rmi_driver.h"
 #include "rmi_2d_sensor.h"
 
+#include "linhdebug.h"
+
 #define F11_MAX_NUM_OF_FINGERS		10
 #define F11_MAX_NUM_OF_TOUCH_SHAPES	16
 
@@ -1257,6 +1259,7 @@ static int rmi_f11_config(struct rmi_function *fn)
 	struct rmi_2d_sensor *sensor = &f11->sensor;
 	int rc;
 
+	print_dbg("");
 	if (!sensor->report_abs)
 		drv->clear_irq_bits(fn->rmi_dev, f11->abs_mask);
 	else

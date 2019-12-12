@@ -17,6 +17,8 @@
 #include "rmi_driver.h"
 #include "rmi_f34.h"
 
+#include "linhdebug.h"
+
 static int rmi_f34_write_bootloader_id(struct f34_data *f34)
 {
 	struct rmi_function *fn = f34->fn;

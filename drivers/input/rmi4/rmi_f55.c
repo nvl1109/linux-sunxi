@@ -12,7 +12,7 @@
 #include <linux/rmi.h>
 #include <linux/slab.h>
 #include "rmi_driver.h"
-
+#include "linhdebug.h"
 #define F55_NAME		"rmi4_f55"
 
 /* F55 data offsets */

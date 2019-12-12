@@ -15,6 +15,8 @@
 #include <asm/unaligned.h>
 #include "rmi_driver.h"
 
+#include "linhdebug.h"
+
 #define RMI_PRODUCT_ID_LENGTH    10
 #define RMI_PRODUCT_INFO_LENGTH   2
 
@@ -350,6 +352,7 @@ static int rmi_f01_of_probe(struct device *dev,
 			"syna,nosleep-mode", 1);
 	if (retval)
 		return retval;
+	print_dbg("f01 nosleep %d", pdata->power_management.nosleep);
 
 	retval = rmi_of_property_read_u32(dev, &val,
 			"syna,wakeup-threshold", 1);
@@ -393,6 +396,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 	u8 device_status;
 	u8 temp;
 
+	print_dbg("");
 	if (fn->dev.of_node) {
 		error = rmi_f01_of_probe(&fn->dev, pdata);
 		if (error)
@@ -416,6 +420,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 		dev_err(&fn->dev, "Failed to read F01 control: %d\n", error);
 		return error;
 	}
+	print_dbg("ctrl0 %x, nosleep %x", f01->device_control.ctrl0, pdata->power_management.nosleep);
 
 	switch (pdata->power_management.nosleep) {
 	case RMI_REG_STATE_DEFAULT:
@@ -448,6 +453,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 		dev_err(&fn->dev, "Failed to write F01 control: %d\n", error);
 		return error;
 	}
+	print_dbg("ctrl0 now %x", f01->device_control.ctrl0);
 
 	/* Dummy read in order to clear irqs */
 	error = rmi_read(rmi_dev, fn->fd.data_base_addr + 1, &temp);
@@ -462,6 +468,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 		dev_err(&fn->dev, "Failed to read F01 properties.\n");
 		return error;
 	}
+	print_dbg("read properties ok");
 
 	dev_info(&fn->dev, "found RMI device, manufacturer: %s, product: %s, fw id: %d\n",
 		 f01->properties.manufacturer_id == 1 ? "Synaptics" : "unknown",
@@ -560,6 +567,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 			"Failed to read device status: %d\n", error);
 		return error;
 	}
+	print_dbg("device status: %d", device_status);
 
 	if (RMI_F01_STATUS_UNCONFIGURED(device_status)) {
 		dev_err(&fn->dev,
@@ -582,6 +590,8 @@ static int rmi_f01_config(struct rmi_function *fn)
 {
 	struct f01_data *f01 = dev_get_drvdata(&fn->dev);
 	int error;
+
+	print_dbg("");
 
 	error = rmi_write(fn->rmi_dev, fn->fd.control_base_addr,
 			  f01->device_control.ctrl0);
@@ -639,7 +649,7 @@ static int rmi_f01_suspend(struct rmi_function *fn)
 		f01->device_control.ctrl0 |= RMI_SLEEP_MODE_RESERVED1;
 	else
 		f01->device_control.ctrl0 |= RMI_SLEEP_MODE_SENSOR_SLEEP;
-
+	print_dbg("ctrl0 %x", f01->device_control.ctrl0);
 	error = rmi_write(fn->rmi_dev, fn->fd.control_base_addr,
 			  f01->device_control.ctrl0);
 	if (error) {
@@ -664,6 +674,8 @@ static int rmi_f01_resume(struct rmi_function *fn)
 
 	f01->device_control.ctrl0 &= ~RMI_F01_CTRL0_SLEEP_MODE_MASK;
 	f01->device_control.ctrl0 |= RMI_SLEEP_MODE_NORMAL;
+
+	print_dbg("ctrl0 %x", f01->device_control.ctrl0);
 
 	error = rmi_write(fn->rmi_dev, fn->fd.control_base_addr,
 			  f01->device_control.ctrl0);

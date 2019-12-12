@@ -26,6 +26,8 @@
 #include "rmi_bus.h"
 #include "rmi_driver.h"
 
+#include "linhdebug.h"
+
 #define HAS_NONSTANDARD_PDT_MASK 0x40
 #define RMI4_MAX_PAGE 0xff
 #define RMI4_PAGE_SIZE 0x100
@@ -151,6 +153,8 @@ static int rmi_process_interrupt_requests(struct rmi_device *rmi_dev)
 	struct rmi_function *entry;
 	int error;
 
+	print_dbg("data %p", data);
+
 	if (!data)
 		return 0;
 
@@ -162,9 +166,11 @@ static int rmi_process_interrupt_requests(struct rmi_device *rmi_dev)
 			dev_err(dev, "Failed to read irqs, code=%d\n", error);
 			return error;
 		}
+		print_dbg("err %d, irq status %x, num irq %d", error, *data->irq_status, data->num_of_irq_regs);
 	}
 
 	mutex_lock(&data->irq_mutex);
+	print_dbg("status %x, mask %x, count %d", *data->irq_status, *data->current_irq_mask, data->irq_count);
 	bitmap_and(data->irq_status, data->irq_status, data->current_irq_mask,
 	       data->irq_count);
 	/*
@@ -184,8 +190,10 @@ static int rmi_process_interrupt_requests(struct rmi_device *rmi_dev)
 	list_for_each_entry(entry, &data->function_list, node)
 		process_one_interrupt(data, entry);
 
-	if (data->input)
+	if (data->input) {
+		print_dbg("input sync...");
 		input_sync(data->input);
+	}
 
 	return 0;
 }
@@ -247,6 +255,8 @@ static int rmi_irq_init(struct rmi_device *rmi_dev)
 	struct rmi_driver_data *data = dev_get_drvdata(&rmi_dev->dev);
 	int irq_flags = irq_get_trigger_type(pdata->irq);
 	int ret;
+
+	print_dbg("irq %d flag %d", pdata->irq, irq_flags);
 
 	if (!irq_flags)
 		irq_flags = IRQF_TRIGGER_LOW;
@@ -397,9 +407,12 @@ static int rmi_driver_set_irq_bits(struct rmi_device *rmi_dev,
 	struct rmi_driver_data *data = dev_get_drvdata(&rmi_dev->dev);
 	struct device *dev = &rmi_dev->dev;
 
+	print_dbg("no of irq regs %d, irq count %d, en %d, irq status %x, bits %x, cur mask %x, new mask %x", data->num_of_irq_regs, data->irq_count, data->enabled, *data->irq_status, *data->fn_irq_bits,*data->current_irq_mask,*data->new_irq_mask);
+
 	mutex_lock(&data->irq_mutex);
 	bitmap_or(data->new_irq_mask,
 		  data->current_irq_mask, mask, data->irq_count);
+	print_dbg("mask %x, new mask %x, irq count %d", *mask, *data->current_irq_mask, data->irq_count);
 
 	error = rmi_write_block(rmi_dev,
 			data->f01_container->fd.control_base_addr + 1,
@@ -423,6 +436,8 @@ static int rmi_driver_clear_irq_bits(struct rmi_device *rmi_dev,
 	int error = 0;
 	struct rmi_driver_data *data = dev_get_drvdata(&rmi_dev->dev);
 	struct device *dev = &rmi_dev->dev;
+
+	print_dbg("mask %x", *mask);
 
 	mutex_lock(&data->irq_mutex);
 	bitmap_andnot(data->new_irq_mask,
@@ -906,6 +921,8 @@ void rmi_enable_irq(struct rmi_device *rmi_dev, bool clear_wake)
 	int irq = pdata->irq;
 	int irq_flags;
 	int retval;
+
+	print_dbg("irq %d, flag %d, clear wake %d", irq, irq_flags, clear_wake);
 
 	mutex_lock(&data->enabled_mutex);
 

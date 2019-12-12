@@ -18,7 +18,7 @@
 #include <media/videobuf2-v4l2.h>
 #include <media/videobuf2-vmalloc.h>
 #include "rmi_driver.h"
-
+#include "linhdebug.h"
 #define F54_NAME		"rmi4_f54"
 
 /* F54 data offsets */
@@ -618,6 +618,8 @@ static int rmi_f54_attention(struct rmi_function *fn, unsigned long *irqbits)
 static int rmi_f54_config(struct rmi_function *fn)
 {
 	struct rmi_driver *drv = fn->rmi_dev->driver;
+
+	print_dbg("");
 
 	drv->set_irq_bits(fn->rmi_dev, fn->irq_mask);
 
