@@ -128,11 +128,6 @@
 
 		syna,startup-delay-ms = <10>;
 
-		/*rmi4-f01@1 {
-			reg = <0x1>;
-			syna,nosleep-mode = <1>;
-		};*/
-
 		rmi4-f11@11 {
 			reg = <0x11>;
 			touchscreen-inverted-x;
@@ -140,17 +135,3 @@
 		};
 	};
 };
-
-/*&i2c3 {
-	polytouch: edt-ft5x06@38 {
-		compatible = "edt,edt-ft5x06";
-		reg = <0x38>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_touch_irq &pinctrl_touch_rst>;
-		interrupt-parent = <&gpio1>;
-		interrupts = <7 IRQ_TYPE_EDGE_FALLING>;
-		reset-gpios = <&gpio3 18 GPIO_ACTIVE_LOW>;
-		touchscreen-size-x = <720>;
-		touchscreen-size-y = <1280>;
-	};
-};*/

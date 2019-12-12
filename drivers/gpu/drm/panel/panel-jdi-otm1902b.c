@@ -1121,29 +1121,22 @@ static int otm1920b_prepare(struct drm_panel *panel)
 {
 	struct otm1920b *ctx = panel_to_otm1920b(panel);
 
-	/* Power the panel */
-	// if (!IS_ERR(ctx->power)) {
-	// 	gpiod_set_value(ctx->power, 1);
-	// 	msleep(5);
-	// }
-	/* And reset it */
-
 	if (!IS_ERR(ctx->tpreset)) {
 		print_dbg("reset Touch");
-		gpiod_set_value(ctx->tpreset, 0);
-		msleep(5);
 		gpiod_set_value(ctx->tpreset, 1);
+		msleep(5);
+		gpiod_set_value(ctx->tpreset, 0);
 		msleep(5);
 	}
 	if (!IS_ERR(ctx->reset)) {
 		print_dbg("reset Panel");
-		gpiod_set_value(ctx->reset, 1); // High for > 15ms
+		gpiod_set_value(ctx->reset, 0); // High for > 15ms
 		msleep(20);
 
-		gpiod_set_value(ctx->reset, 0); // Low for > 20us
+		gpiod_set_value(ctx->reset, 1); // Low for > 20us
 		msleep(1);
 
-		gpiod_set_value(ctx->reset, 1); // Keep high & wait for > 10ms
+		gpiod_set_value(ctx->reset, 0); // Keep high & wait for > 10ms
 		msleep(20);
 	}
 
@@ -1159,25 +1152,6 @@ static int otm1920b_enable(struct drm_panel *panel)
 	ctx->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
 	print_dbg("start pannel enable");
 
-	// if (!IS_ERR(ctx->tpreset)) {
-	// 	print_dbg("reset Touch");
-	// 	gpiod_set_value(ctx->tpreset, 0);
-	// 	msleep(5);
-	// 	gpiod_set_value(ctx->tpreset, 1);
-	// 	msleep(5);
-	// }
-	// if (!IS_ERR(ctx->reset)) {
-	// 	print_dbg("reset LCD");
-	// 	gpiod_set_value(ctx->reset, 1); // High for > 15ms
-	// 	msleep(20);
-
-	// 	gpiod_set_value(ctx->reset, 0); // Low for > 20us
-	// 	msleep(1);
-
-	// 	gpiod_set_value(ctx->reset, 1); // Keep high & wait for > 10ms
-	// 	msleep(20);
-	// }
-
 	ret = mipi_dsi_cmds_tx(cleveredge_inital_1080P_cmds, ARRAY_SIZE(cleveredge_inital_1080P_cmds), ctx);
 	print_dbg("clever init 1080p done");
 	ret = mipi_dsi_cmds_tx(jdi_display_on_cmd, ARRAY_SIZE(jdi_display_on_cmd), ctx);
@@ -1186,27 +1160,6 @@ static int otm1920b_enable(struct drm_panel *panel)
 	print_dbg("display on 1 done");
 	ret = mipi_dsi_cmds_tx(jdi_cabc_ui_on_cmds, ARRAY_SIZE(jdi_cabc_ui_on_cmds), ctx);
 	print_dbg("cabc ui on done");
-
-	// ret = mipi_dsi_dcs_set_tear_on(ctx->dsi, MIPI_DSI_DCS_TEAR_MODE_VBLANK);
-	// print_dbg("set tear on, ret %d", ret);
-	// if (ret)
-	// 	return ret;
-
-	// ret = mipi_dsi_dcs_exit_sleep_mode(ctx->dsi);
-	// print_dbg("exit sleep mode, ret %d", ret);
-	// if (ret)
-	// 	return ret;
-
-	// msleep(120);
-
-	// mipi_dsi_dcs_set_display_on(ctx->dsi);
-	// print_dbg("dcs set display on");
-
-	// ret = mipi_dsi_dcs_get_display_brightness(ctx->dsi, &tmp);
-	// print_dbg("brightness %u, ret %d", tmp, ret);
-
-	// ret = mipi_dsi_dcs_set_display_brightness(ctx->dsi, 28);
-	// print_dbg("Set brightness to 128, ret %d", ret);
 
 	return 0;
 }
@@ -1227,17 +1180,15 @@ static int otm1920b_unprepare(struct drm_panel *panel)
 
 	print_dbg("");
 	mipi_dsi_dcs_enter_sleep_mode(ctx->dsi);
-	// if (!IS_ERR(ctx->power))
-	// 	gpiod_set_value(ctx->power, 0);
 
 	// Keep LCD RESET low
 	if (!IS_ERR(ctx->reset)) {
 		print_dbg("poweroff Panel");
-		gpiod_set_value(ctx->reset, 0);
+		gpiod_set_value(ctx->reset, 1);
 	}
 	if (!IS_ERR(ctx->tpreset)) {
 		print_dbg("poweroff Touch");
-		gpiod_set_value(ctx->tpreset, 0);
+		gpiod_set_value(ctx->tpreset, 1);
 	}
 
 	return 0;
@@ -1378,11 +1329,6 @@ static int otm1920b_dsi_probe(struct mipi_dsi_device *dsi)
 	ctx->panel.dev = &dsi->dev;
 	ctx->panel.funcs = &otm1920b_funcs;
 
-	// ctx->power = devm_gpiod_get(&dsi->dev, "power", GPIOD_OUT_LOW);
-	// if (IS_ERR(ctx->power)) {
-	// 	print_err("Couldn't get our power GPIO");
-	// }
-	// print_dbg("power gpio ok");
 	ctx->tpreset = devm_gpiod_get(&dsi->dev, "tpreset", GPIOD_OUT_LOW);
 	if (IS_ERR(ctx->tpreset)) {
 		print_err("Couldn't get our tpreset GPIO");
