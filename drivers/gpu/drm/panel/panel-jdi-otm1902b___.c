@@ -1,20 +1,26 @@
-// SPDX-License-Identifier: GPL-2.0
+// SPDX-License-Identifier: GPL-2.0+
 /*
- * i.MX drm driver - 
+ * Copyright (C) 2017, Free Electrons
+ * Author: Maxime Ripard <maxime.ripard@free-electrons.com>
  */
 
-#include <drm/drmP.h>
+#include <linux/delay.h>
+#include <linux/device.h>
+#include <linux/err.h>
+#include <linux/errno.h>
+#include <linux/fb.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
+
+#include <linux/gpio/consumer.h>
+
 #include <drm/drm_crtc.h>
 #include <drm/drm_mipi_dsi.h>
+#include <drm/drm_modes.h>
 #include <drm/drm_panel.h>
-#include <linux/gpio/consumer.h>
-#include <linux/module.h>
-#include <linux/of.h>
-#include <linux/regulator/consumer.h>
-#include <video/mipi_display.h>
-#include <video/of_videomode.h>
 #include <video/videomode.h>
 
+#include <video/mipi_display.h>
 
 #define __DEBUG 1
 #define __DBG_INFO 1
@@ -32,6 +38,16 @@
 #define print_warn(fmt,args...) pr_info("LINH otm1902 %s(): WARN " fmt "\n", __func__, ##args)
 #define print_err(fmt,args...) pr_err("LINH otm1902 %s(): ERR " fmt "\n", __func__, ##args)
 
+struct otm1920b {
+	struct drm_panel	panel;
+	struct mipi_dsi_device	*dsi;
+
+	// struct gpio_desc	*power;
+	struct gpio_desc	*reset;
+	struct gpio_desc	*tpreset;
+	u32	timing_mode;
+};
+
 #define WAIT_TYPE_US 1
 #define WAIT_TYPE_MS 2
 #define WAIT_TYPE_S  3
@@ -44,44 +60,6 @@ struct dsi_cmd_desc {
 };
 
 
-static char poweron_arr[] = {
-	0x00,
-	0xFF,
-	0x19,
-	0x02,
-	0x01,
-	0x00,
-	0x80,
-	0xFF,
-	0x19,
-	0x02,
-	0x00,
-	0x83,
-	0xF3,
-	0xCA,
-	0x00,
-	0x90,
-	0xC4,
-	0x00,
-	0x00,
-	0xB4,
-	0xC0,
-	0xC0,
-	0x2A,
-	0x00,
-	0x00,
-	0x04,
-	0x37,
-	0x2B,
-	0x00,
-	0x00,
-	0x07,
-	0x7F,
-};
-static struct dsi_cmd_desc jdi_display_on_cmd3[] = {
-	{20, WAIT_TYPE_MS,
-		sizeof(poweron_arr), poweron_arr},
-};
 /*******************************************************************************
 ** Power ON Sequence(sleep mode to Normal mode)
 */
@@ -964,9 +942,19 @@ static char command_2_enable_2_para[] = {
 	0x19, 0x02,
 };
 
+static char HD720_setting_1_para[] = {
+	0x2A,
+	0x00, 0x00, 0x02, 0xCF,
+};
+
 static char HD1080_setting_1_para[] = {
 	0x2a,
 	0x00, 0x00, 0x04, 0x37,
+};
+
+static char HD720_setting_2_para[] = {
+	0x2B,
+	0x00, 0x00, 0x04, 0xFF,
 };
 
 static char HD1080_setting_2_para[] = {
@@ -1096,30 +1084,15 @@ static struct dsi_cmd_desc cleveredge_inital_1080P_cmds[] = {
 		sizeof(sp_D7_3), sp_D7_3},
 };
 
-static const u32 jdi_bus_formats[] = {
-	MEDIA_BUS_FMT_RGB888_1X24,
-};
 
-struct jdi_otm1902_panel {
-	struct drm_panel base;
-	struct mipi_dsi_device *dsi;
 
-	struct gpio_desc *reset;
 
-	bool prepared;
-	bool enabled;
-
-	struct videomode vm;
-	u32 width_mm;
-	u32 height_mm;
-};
-
-static inline struct jdi_otm1902_panel *to_rad_panel(struct drm_panel *panel)
+static inline struct otm1920b *panel_to_otm1920b(struct drm_panel *panel)
 {
-	return container_of(panel, struct jdi_otm1902_panel, base);
+	return container_of(panel, struct otm1920b, panel);
 }
 
-static int mipi_dsi_cmds_tx(struct dsi_cmd_desc *cmds, int cnt, struct jdi_otm1902_panel *ctx)
+static int mipi_dsi_cmds_tx(struct dsi_cmd_desc *cmds, int cnt, struct otm1920b *ctx)
 {
 	int i;
 	int ret;
@@ -1145,389 +1118,332 @@ static int mipi_dsi_cmds_tx(struct dsi_cmd_desc *cmds, int cnt, struct jdi_otm19
 	return cnt;
 }
 
-static int color_format_from_dsi_format(enum mipi_dsi_pixel_format format)
+static int otm1920b_prepare(struct drm_panel *panel)
 {
-	switch (format) {
-	case MIPI_DSI_FMT_RGB565:
-		return 0x55;
-	case MIPI_DSI_FMT_RGB666:
-	case MIPI_DSI_FMT_RGB666_PACKED:
-		return 0x66;
-	case MIPI_DSI_FMT_RGB888:
-		return 0x77;
-	default:
-		return 0x77; /* for backward compatibility */
+	struct otm1920b *ctx = panel_to_otm1920b(panel);
+	int ret;
+
+	if (!IS_ERR(ctx->reset)) {
+		print_dbg("reset Panel");
+		gpiod_set_value(ctx->reset, 0); // High for > 15ms
+		msleep(20);
+
+		gpiod_set_value(ctx->reset, 1); // Low for > 20us
+		msleep(10);
+
+		gpiod_set_value(ctx->reset, 0); // Keep high & wait for > 10ms
+		msleep(70);
 	}
+	if (!IS_ERR(ctx->tpreset)) {
+		print_dbg("reset Touch");
+		gpiod_set_value(ctx->tpreset, 1);
+		msleep(5);
+		gpiod_set_value(ctx->tpreset, 0);
+		msleep(50);
+	}
+
+	ctx->dsi->mode_flags |= MIPI_DSI_MODE_LPM;
+	print_dbg("start pannel enable");
+
+	ret = mipi_dsi_cmds_tx(cleveredge_inital_1080P_cmds, ARRAY_SIZE(cleveredge_inital_1080P_cmds), ctx);
+	print_dbg("clever init 1080p done");
+	ret = mipi_dsi_cmds_tx(jdi_display_on_cmd, ARRAY_SIZE(jdi_display_on_cmd), ctx);
+	print_dbg("display on 0 done");
+	ret = mipi_dsi_cmds_tx(jdi_display_on_cmd1, ARRAY_SIZE(jdi_display_on_cmd1), ctx);
+	print_dbg("display on 1 done");
+	ret = mipi_dsi_cmds_tx(jdi_cabc_ui_on_cmds, ARRAY_SIZE(jdi_cabc_ui_on_cmds), ctx);
+	print_dbg("cabc ui on done");
+
+	ret = mipi_dsi_dcs_exit_sleep_mode(ctx->dsi);
+	if (ret < 0) {
+		print_err("failed to exit from sleep mode: %d", ret);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int otm1920b_enable(struct drm_panel *panel)
+{
+	struct otm1920b *ctx = panel_to_otm1920b(panel);
+	print_dbg("start pannel enable");
+
+	msleep(120);
+
+	mipi_dsi_dcs_set_display_on(ctx->dsi);
+
+	return 0;
+}
+
+static int otm1920b_disable(struct drm_panel *panel)
+{
+	struct otm1920b *ctx = panel_to_otm1920b(panel);
+
+	mipi_dsi_cmds_tx(jdi_display_off_cmds, ARRAY_SIZE(jdi_display_off_cmds), ctx);
+	print_dbg("display off done");
+
+	return mipi_dsi_dcs_set_display_off(ctx->dsi);
+}
+
+static int otm1920b_unprepare(struct drm_panel *panel)
+{
+	struct otm1920b *ctx = panel_to_otm1920b(panel);
+
+	print_dbg("");
+	mipi_dsi_dcs_enter_sleep_mode(ctx->dsi);
+
+	// Keep LCD RESET low
+	if (!IS_ERR(ctx->reset)) {
+		print_dbg("poweroff Panel");
+		gpiod_set_value(ctx->reset, 1);
+	}
+	if (!IS_ERR(ctx->tpreset)) {
+		print_dbg("poweroff Touch");
+		gpiod_set_value(ctx->tpreset, 1);
+	}
+
+	return 0;
+}
+
+#if 0 // ILI9881
+static const struct drm_display_mode default_mode = {
+	.clock          = 74250,
+	.vrefresh       = 60,
+	.hdisplay       = 1080,
+	.hsync_start    = 1080 + 45,
+	.hsync_end      = 1080 + 45 + 140,
+	.htotal = 1080 + 45 + 140 + 140,
+	.vdisplay       = 1920,
+	.vsync_start    = 1920 + 5,
+	.vsync_end      = 1920 + 5 + 50,
+	.vtotal = 1920 + 5 + 50 + 40,
 };
 
-static int jdi_panel_prepare(struct drm_panel *panel)
+#else
+// From raydium-rm67191
+// static const struct drm_display_mode default_mode = {
+// 	.clock = 132000,
+// 	.hdisplay = 1080,
+// 	.hsync_start = 1080 + 20,
+// 	.hsync_end =  1080 + 20 + 2,
+// 	.htotal = 1080 + 20 + 2 + 34,
+// 	.vdisplay = 1920,
+// 	.vsync_start = 1920 + 10,
+// 	.vsync_end = 1920 + 10 + 2,
+// 	.vtotal = 1920 + 10 + 2 + 4,
+// 	.vrefresh = 60,
+// 	.flags = 0,
+// };
+
+// From android OTM1920B
+static const struct drm_display_mode default_mode = {
+	// .clock = 148500,
+	// .hdisplay = 1080,
+	// .hsync_start = 1080 + 50,
+	// .hsync_end =  1080 + 50 + 20,
+	// .htotal = 1080 + 50 + 20 + 23,
+	// .vdisplay = 1920,
+	// .vsync_start = 1920 + 14,
+	// .vsync_end = 1920 + 14 + 4,
+	// .vtotal = 1920 + 14 + 4 + 12,
+	// .vrefresh = 60,
+	// .flags = 0,
+
+	// .clock = 148500,
+	// .hdisplay	= 1080,
+	// .hsync_start	= 1080 + 408,
+	// .hsync_end	= 1080 + 408 + 4,
+	// .htotal		= 1080 + 408 + 4 + 38,
+
+	// .vdisplay	= 1920,
+	// .vsync_start	= 1920 + 9,
+	// .vsync_end	= 1920 + 9 + 12,
+	// .vtotal		= 1920 + 9 + 12 + 9,
+	// .vrefresh	= 50,
+
+	.clock          = 74250,
+	.vrefresh       = 60,
+	.hdisplay       = 1080,
+	.hsync_start    = 1080 + 45,
+	.hsync_end      = 1080 + 45 + 140,
+	.htotal = 1080 + 45 + 140 + 140,
+	.vdisplay       = 1920,
+	.vsync_start    = 1920 + 5,
+	.vsync_end      = 1920 + 5 + 50,
+	.vtotal = 1920 + 5 + 50 + 40,
+
+	.width_mm	= 64,
+	.height_mm	= 116,
+
+	.type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED,
+};
+
+#endif
+
+// struct videomode default_vmmode = {
+// 	.pixelclock = 132000000,
+// 	.hactive = 1080,
+// 	.vactive = 1920,
+// 	.hfront_porch = 20,
+// 	.hsync_len = 2,
+// 	.hback_porch = 34,
+// 	.vfront_porch = 10,
+// 	.vsync_len = 2,
+// 	.vback_porch = 4,
+// 	.flags = DISPLAY_FLAGS_HSYNC_LOW |
+// 		 DISPLAY_FLAGS_VSYNC_LOW |
+// 		 DISPLAY_FLAGS_DE_LOW |
+// 		 DISPLAY_FLAGS_PIXDATA_NEGEDGE,
+// };
+
+static int otm1920b_get_modes(struct drm_panel *panel)
 {
-	struct jdi_otm1902_panel *rad = to_rad_panel(panel);
-
-	if (rad->prepared)
-		return 0;
-
-	if (rad->reset != NULL) {
-		gpiod_set_value(rad->reset, 1);
-		usleep_range(20000, 30000);
-		gpiod_set_value(rad->reset, 0);
-		usleep_range(30000, 35000);
-	}
-
-	rad->prepared = true;
-
-	return 0;
-}
-
-static int jdi_panel_unprepare(struct drm_panel *panel)
-{
-	struct jdi_otm1902_panel *rad = to_rad_panel(panel);
-	struct device *dev = &rad->dsi->dev;
-
-	if (!rad->prepared)
-		return 0;
-
-	if (rad->enabled) {
-		DRM_DEV_ERROR(dev, "Panel still enabled!\n");
-		return -EPERM;
-	}
-
-	if (rad->reset != NULL) {
-		gpiod_set_value(rad->reset, 1);
-		usleep_range(15000, 17000);
-		gpiod_set_value(rad->reset, 0);
-	}
-
-	rad->prepared = false;
-
-	return 0;
-}
-
-static int jdi_panel_enable(struct drm_panel *panel)
-{
-	struct jdi_otm1902_panel *rad = to_rad_panel(panel);
-	struct mipi_dsi_device *dsi = rad->dsi;
-	struct device *dev = &dsi->dev;
-	int color_format = color_format_from_dsi_format(dsi->format);
-	u16 brightness;
-	int ret;
-
-	if (rad->enabled)
-		return 0;
-
-	if (!rad->prepared) {
-		DRM_DEV_ERROR(dev, "Panel not prepared!\n");
-		return -EPERM;
-	}
-
-	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
-
-	// ret = mipi_dsi_cmds_tx(cleveredge_inital_1080P_cmds, ARRAY_SIZE(cleveredge_inital_1080P_cmds), rad);
-	// print_dbg("clever init 1080p done");
-	// ret = mipi_dsi_cmds_tx(jdi_display_on_cmd, ARRAY_SIZE(jdi_display_on_cmd), rad);
-	// print_dbg("display on 0 done");
-	// ret = mipi_dsi_cmds_tx(jdi_display_on_cmd1, ARRAY_SIZE(jdi_display_on_cmd1), rad);
-	// print_dbg("display on 1 done");
-	// ret = mipi_dsi_cmds_tx(jdi_cabc_ui_on_cmds, ARRAY_SIZE(jdi_cabc_ui_on_cmds), rad);
-	// print_dbg("cabc ui on done");
-
-	/* Software reset */
-	ret = mipi_dsi_dcs_soft_reset(dsi);
-	if (ret < 0) {
-		DRM_DEV_ERROR(dev, "Failed to do Software Reset (%d)\n", ret);
-		goto fail;
-	}
-
-	usleep_range(15000, 17000);
-
-	ret = mipi_dsi_cmds_tx(jdi_display_on_cmd3, ARRAY_SIZE(jdi_display_on_cmd3), rad);
-
-	/* Set DSI mode */
-	ret = mipi_dsi_generic_write(dsi, (u8[]){ 0xC2, 0x0B }, 2);
-	if (ret < 0) {
-		DRM_DEV_ERROR(dev, "Failed to set DSI mode (%d)\n", ret);
-		goto fail;
-	}
-	/* Set tear ON */
-	ret = mipi_dsi_dcs_set_tear_on(dsi, MIPI_DSI_DCS_TEAR_MODE_VBLANK);
-	if (ret < 0) {
-		DRM_DEV_ERROR(dev, "Failed to set tear ON (%d)\n", ret);
-		goto fail;
-	}
-	/* Set tear scanline */
-	ret = mipi_dsi_dcs_set_tear_scanline(dsi, 0x380);
-	if (ret < 0) {
-		DRM_DEV_ERROR(dev, "Failed to set tear scanline (%d)\n", ret);
-		goto fail;
-	}
-	/* Set pixel format */
-	ret = mipi_dsi_dcs_set_pixel_format(dsi, color_format);
-	DRM_DEV_DEBUG_DRIVER(dev, "Interface color format set to 0x%x\n",
-				color_format);
-	if (ret < 0) {
-		DRM_DEV_ERROR(dev, "Failed to set pixel format (%d)\n", ret);
-		goto fail;
-	}
-	/* Exit sleep mode */
-	ret = mipi_dsi_dcs_exit_sleep_mode(dsi);
-	if (ret < 0) {
-		DRM_DEV_ERROR(dev, "Failed to exit sleep mode (%d)\n", ret);
-		goto fail;
-	}
-
-	usleep_range(5000, 10000);
-
-	ret = mipi_dsi_dcs_set_display_on(dsi);
-	if (ret < 0) {
-		DRM_DEV_ERROR(dev, "Failed to set display ON (%d)\n", ret);
-		goto fail;
-	}
-
-	rad->enabled = true;
-
-	return 0;
-
-fail:
-	if (rad->reset != NULL)
-		gpiod_set_value(rad->reset, 1);
-
-	return ret;
-}
-
-static int jdi_panel_disable(struct drm_panel *panel)
-{
-	struct jdi_otm1902_panel *rad = to_rad_panel(panel);
-	struct mipi_dsi_device *dsi = rad->dsi;
-	struct device *dev = &dsi->dev;
-	int ret;
-
-	if (!rad->enabled)
-		return 0;
-
-	dsi->mode_flags |= MIPI_DSI_MODE_LPM;
-
-	usleep_range(10000, 15000);
-
-	ret = mipi_dsi_dcs_set_display_off(dsi);
-	if (ret < 0) {
-		DRM_DEV_ERROR(dev, "Failed to set display OFF (%d)\n", ret);
-		return ret;
-	}
-
-	usleep_range(5000, 10000);
-
-	ret = mipi_dsi_dcs_enter_sleep_mode(dsi);
-	if (ret < 0) {
-		DRM_DEV_ERROR(dev, "Failed to enter sleep mode (%d)\n", ret);
-		return ret;
-	}
-
-	rad->enabled = false;
-
-	return 0;
-}
-
-static int rad_panel_get_modes(struct drm_panel *panel)
-{
-	struct jdi_otm1902_panel *rad = to_rad_panel(panel);
-	struct device *dev = &rad->dsi->dev;
 	struct drm_connector *connector = panel->connector;
+	struct otm1920b *ctx = panel_to_otm1920b(panel);
 	struct drm_display_mode *mode;
-	u32 *bus_flags = &connector->display_info.bus_flags;
+	const struct drm_display_mode *display_mode;
+	u32 bus_format = MEDIA_BUS_FMT_RGB888_1X24;
 	int ret;
 
-	mode = drm_mode_create(connector->dev);
+	display_mode = &default_mode;
+	print_dbg("timing mode: %d", ctx->timing_mode);
+
+	mode = drm_mode_duplicate(panel->drm, display_mode);
 	if (!mode) {
-		DRM_DEV_ERROR(dev, "Failed to create display mode!\n");
-		return 0;
+		print_err("failed to add mode %ux%ux@%u",
+			display_mode->hdisplay, display_mode->vdisplay,
+			display_mode->vrefresh);
+		return -ENOMEM;
 	}
 
-	drm_display_mode_from_videomode(&rad->vm, mode);
-	mode->width_mm = rad->width_mm;
-	mode->height_mm = rad->height_mm;
-	connector->display_info.width_mm = rad->width_mm;
-	connector->display_info.height_mm = rad->height_mm;
-	mode->type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
-	mode->vrefresh = 60;
+	drm_mode_set_name(mode);
+	print_dbg("drm mode set done");
 
-	if (rad->vm.flags & DISPLAY_FLAGS_DE_HIGH)
-		*bus_flags |= DRM_BUS_FLAG_DE_HIGH;
-	if (rad->vm.flags & DISPLAY_FLAGS_DE_LOW)
-		*bus_flags |= DRM_BUS_FLAG_DE_LOW;
-	if (rad->vm.flags & DISPLAY_FLAGS_PIXDATA_NEGEDGE)
-		*bus_flags |= DRM_BUS_FLAG_PIXDATA_NEGEDGE;
-	if (rad->vm.flags & DISPLAY_FLAGS_PIXDATA_POSEDGE)
-		*bus_flags |= DRM_BUS_FLAG_PIXDATA_POSEDGE;
+	mode->type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
+
+	panel->connector->display_info.width_mm = mode->width_mm;
+	panel->connector->display_info.height_mm = mode->height_mm;
 
 	ret = drm_display_info_set_bus_formats(&connector->display_info,
-			jdi_bus_formats, ARRAY_SIZE(jdi_bus_formats));
+					       &bus_format, 1);
+	print_dbg("drm set bus ret %d, bus %d", ret, bus_format);
 	if (ret)
 		return ret;
 
-	drm_mode_probed_add(panel->connector, mode);
+	drm_mode_probed_add(connector, mode);
 
 	return 1;
 }
 
-static const struct drm_panel_funcs jdi_panel_funcs = {
-	.prepare = jdi_panel_prepare,
-	.unprepare = jdi_panel_unprepare,
-	.enable = jdi_panel_enable,
-	.disable = jdi_panel_disable,
-	.get_modes = rad_panel_get_modes,
+static const struct drm_panel_funcs otm1920b_funcs = {
+	.prepare	= otm1920b_prepare,
+	.unprepare	= otm1920b_unprepare,
+	.enable		= otm1920b_enable,
+	.disable	= otm1920b_disable,
+	.get_modes	= otm1920b_get_modes,
 };
 
-/*
- * The clock might range from 66MHz (30Hz refresh rate)
- * to 132MHz (60Hz refresh rate)
- */
-static const struct display_timing jdi_default_timing = {
-	.pixelclock = { 135000000, 135000000, 135000000 },
-	.hactive = { 1080, 1080, 1080 },
-	.hfront_porch = { 20, 20, 20 },
-	.hsync_len = { 2, 2, 2 },
-	.hback_porch = { 34, 34, 34 },
-	.vactive = { 1920, 1920, 1920 },
-	.vfront_porch = { 10, 10, 10 },
-	.vsync_len = { 5, 5, 5 },
-	.vback_porch = { 4, 4, 4 },
-	.flags = DISPLAY_FLAGS_HSYNC_LOW |
-		 DISPLAY_FLAGS_VSYNC_LOW |
-		 DISPLAY_FLAGS_DE_LOW |
-		 DISPLAY_FLAGS_PIXDATA_NEGEDGE,
-};
-
-static int jdi_panel_probe(struct mipi_dsi_device *dsi)
+static int otm1920b_dsi_probe(struct mipi_dsi_device *dsi)
 {
 	struct device *dev = &dsi->dev;
 	struct device_node *np = dev->of_node;
-	struct jdi_otm1902_panel *panel;
+	struct otm1920b *ctx;
 	int ret;
+	u32 video_mode;
 
-	panel = devm_kzalloc(&dsi->dev, sizeof(*panel), GFP_KERNEL);
-	if (!panel)
+	print_inf("");
+
+	ctx = devm_kzalloc(&dsi->dev, sizeof(*ctx), GFP_KERNEL);
+	if (!ctx)
 		return -ENOMEM;
+	mipi_dsi_set_drvdata(dsi, ctx);
+	ctx->dsi = dsi;
 
-	mipi_dsi_set_drvdata(dsi, panel);
+	drm_panel_init(&ctx->panel);
+	ctx->panel.dev = &dsi->dev;
+	ctx->panel.funcs = &otm1920b_funcs;
 
-	panel->dsi = dsi;
+	ctx->tpreset = devm_gpiod_get(&dsi->dev, "tpreset", GPIOD_OUT_LOW);
+	if (IS_ERR(ctx->tpreset)) {
+		print_err("Couldn't get our tpreset GPIO");
+	}
+	print_dbg("tpreset gpio ok");
 
+	ctx->reset = devm_gpiod_get(&dsi->dev, "reset", GPIOD_OUT_LOW);
+	if (IS_ERR(ctx->reset)) {
+		print_err("Couldn't get our reset GPIO");
+	}
+	print_dbg("reset gpio ok");
+
+	ret = drm_panel_add(&ctx->panel);
+	print_dbg("drm panel add %d", ret);
+	if (ret < 0)
+		return ret;
+
+	ret = of_property_read_u32(np, "timing-mode", &ctx->timing_mode);
+	print_dbg("timing-mode %d, %d", ret, ctx->timing_mode);
+	if (ret < 0) {
+		print_err("Failed to get timing-mode, use default timing-mode (%d)", ret);
+		ctx->timing_mode = 0;
+		return ret;
+	}
+
+	dsi->lanes = 4;
 	dsi->format = MIPI_DSI_FMT_RGB888;
 	dsi->mode_flags =  MIPI_DSI_MODE_VIDEO_HSE | MIPI_DSI_MODE_VIDEO |
 			   MIPI_DSI_CLOCK_NON_CONTINUOUS;
 
-	dsi->lanes = 4;
+	ret = of_property_read_u32(np, "video-mode", &video_mode);
+	print_dbg("video-mode ret %d, %d", ret, video_mode);
+	if (!ret) {
+		switch (video_mode) {
+		case 0:
+			/* burst mode */
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_BURST;
+			break;
+		case 1:
+			/* non-burst mode with sync event */
+			break;
+		case 2:
+			/* non-burst mode with sync pulse */
+			dsi->mode_flags |= MIPI_DSI_MODE_VIDEO_SYNC_PULSE;
+			break;
+		default:
+			print_warn("invalid video mode %d", video_mode);
+			break;
 
-	/*
-	 * 'display-timings' is optional, so verify if the node is present
-	 * before calling of_get_videomode so we won't get console error
-	 * messages
-	 */
-	videomode_from_timing(&jdi_default_timing, &panel->vm);
-
-	panel->width_mm = 64;
-	panel->height_mm = 116;
-
-	panel->reset = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
-
-	if (IS_ERR(panel->reset)) {
-		panel->reset = NULL;
-		print_err("reset pin failed");
+		}
 	}
 
-	drm_panel_init(&panel->base);
-	panel->base.funcs = &jdi_panel_funcs;
-	panel->base.dev = dev;
-	dev_set_drvdata(dev, panel);
-
-	ret = drm_panel_add(&panel->base);
-
-	if (ret < 0)
-		return ret;
-
-	ret = mipi_dsi_attach(dsi);
-	if (ret < 0)
-		drm_panel_remove(&panel->base);
-
-	return ret;
+	return mipi_dsi_attach(dsi);
 }
 
-static int jdi_panel_remove(struct mipi_dsi_device *dsi)
+static int otm1920b_dsi_remove(struct mipi_dsi_device *dsi)
 {
-	struct jdi_otm1902_panel *rad = mipi_dsi_get_drvdata(dsi);
-	struct device *dev = &dsi->dev;
-	int ret;
+	struct otm1920b *ctx = mipi_dsi_get_drvdata(dsi);
 
-	ret = mipi_dsi_detach(dsi);
-	if (ret < 0)
-		DRM_DEV_ERROR(dev, "Failed to detach from host (%d)\n",
-			ret);
-
-	drm_panel_remove(&rad->base);
+	mipi_dsi_detach(dsi);
+	drm_panel_remove(&ctx->panel);
 
 	return 0;
 }
 
-static void jdi_panel_shutdown(struct mipi_dsi_device *dsi)
-{
-	struct jdi_otm1902_panel *rad = mipi_dsi_get_drvdata(dsi);
-
-	jdi_panel_disable(&rad->base);
-	jdi_panel_unprepare(&rad->base);
-}
-
-#ifdef CONFIG_PM
-static int jdi_panel_suspend(struct device *dev)
-{
-	struct jdi_otm1902_panel *rad = dev_get_drvdata(dev);
-
-	if (!rad->reset)
-		return 0;
-
-	devm_gpiod_put(dev, rad->reset);
-	rad->reset = NULL;
-
-	return 0;
-}
-
-static int jdi_panel_resume(struct device *dev)
-{
-	struct jdi_otm1902_panel *rad = dev_get_drvdata(dev);
-
-	if (rad->reset)
-		return 0;
-
-	rad->reset = devm_gpiod_get(dev, "reset", GPIOD_OUT_LOW);
-	if (IS_ERR(rad->reset))
-		rad->reset = NULL;
-
-	return PTR_ERR_OR_ZERO(rad->reset);
-}
-#endif
-
-static const struct dev_pm_ops rad_pm_ops = {
-	SET_RUNTIME_PM_OPS(jdi_panel_suspend, jdi_panel_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(jdi_panel_suspend, jdi_panel_resume)
-};
-
-static const struct of_device_id jdi_of_match[] = {
-	{ .compatible = "jdi,otm1902b", },
+static const struct of_device_id otm1920b_of_match[] = {
+	{ .compatible = "jdi,otm1902b" },
 	{ }
 };
-MODULE_DEVICE_TABLE(of, jdi_of_match);
+MODULE_DEVICE_TABLE(of, otm1920b_of_match);
 
-static struct mipi_dsi_driver jdi_panel_driver = {
+static struct mipi_dsi_driver otm1920b_dsi_driver = {
+	.probe		= otm1920b_dsi_probe,
+	.remove		= otm1920b_dsi_remove,
 	.driver = {
-		.name = "panel-jdi-otm1902b",
-		.of_match_table = jdi_of_match,
-		.pm	= &rad_pm_ops,
+		.name		= "jdi-otm1920b-dsi",
+		.of_match_table	= otm1920b_of_match,
 	},
-	.probe = jdi_panel_probe,
-	.remove = jdi_panel_remove,
-	.shutdown = jdi_panel_shutdown,
 };
-module_mipi_dsi_driver(jdi_panel_driver);
+module_mipi_dsi_driver(otm1920b_dsi_driver);
 
-MODULE_AUTHOR("Robert Chiras <robert.chiras@nxp.com>");
-MODULE_DESCRIPTION("DRM Driver for Raydium RM67191 MIPI DSI panel");
+MODULE_AUTHOR("Linh Nguyen <nvl1109@gmail.com>");
+MODULE_DESCRIPTION("JDI TPM0501010P Controller Driver");
 MODULE_LICENSE("GPL v2");

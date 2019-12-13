@@ -175,6 +175,7 @@ enum drm_mode_status drm_crtc_mode_valid(struct drm_crtc *crtc,
 					 const struct drm_display_mode *mode)
 {
 	const struct drm_crtc_helper_funcs *crtc_funcs = crtc->helper_private;
+	pr_info("LINH drmcrtc %s(): DBG mode clock %u\n", __func__, mode->clock);
 
 	if (!crtc_funcs || !crtc_funcs->mode_valid)
 		return MODE_OK;
@@ -187,6 +188,7 @@ enum drm_mode_status drm_encoder_mode_valid(struct drm_encoder *encoder,
 {
 	const struct drm_encoder_helper_funcs *encoder_funcs =
 		encoder->helper_private;
+	pr_info("LINH drm bridge %s(): DBG mode clock %u\n", __func__, mode->clock);
 
 	if (!encoder_funcs || !encoder_funcs->mode_valid)
 		return MODE_OK;
@@ -199,6 +201,7 @@ enum drm_mode_status drm_connector_mode_valid(struct drm_connector *connector,
 {
 	const struct drm_connector_helper_funcs *connector_funcs =
 		connector->helper_private;
+	pr_info("LINH drm bridge %s(): DBG mode clock %u\n", __func__, mode->clock);
 
 	if (!connector_funcs || !connector_funcs->mode_valid)
 		return MODE_OK;

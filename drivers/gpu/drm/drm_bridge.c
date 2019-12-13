@@ -225,6 +225,7 @@ enum drm_mode_status drm_bridge_mode_valid(struct drm_bridge *bridge,
 {
 	enum drm_mode_status ret = MODE_OK;
 
+	pr_info("LINH drm bridge %s(): DBG mode clock %u\n", __func__, mode->clock);
 	if (!bridge)
 		return ret;
 

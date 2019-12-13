@@ -145,3 +145,9 @@
 	};
 };
 
+&mipi_csi_1 {
+	status = "disabled";
+};
+&mipi_csi_2 {
+	status = "disabled";
+};

@@ -179,6 +179,7 @@ int drm_fb_helper_single_add_all_connectors(struct drm_fb_helper *fb_helper)
 	struct drm_connector_list_iter conn_iter;
 	int i, ret = 0;
 
+	pr_info("LINH drmfb %s(): DBG \n", __func__);
 	if (!drm_fbdev_emulation)
 		return 0;
 
@@ -186,12 +187,15 @@ int drm_fb_helper_single_add_all_connectors(struct drm_fb_helper *fb_helper)
 	drm_connector_list_iter_begin(dev, &conn_iter);
 	drm_for_each_connector_iter(connector, &conn_iter) {
 		ret = __drm_fb_helper_add_one_connector(fb_helper, connector);
+		pr_info("LINH drmfb %s(): DBG ret %d\n", __func__, ret);
 		if (ret)
 			goto fail;
 	}
+	pr_info("LINH drmfb %s(): DBG OK\n", __func__);
 	goto out;
 
 fail:
+	pr_info("LINH drmfb %s(): DBG FAIL\n", __func__);
 	drm_fb_helper_for_each_connector(fb_helper, i) {
 		struct drm_fb_helper_connector *fb_helper_connector =
 			fb_helper->connector_info[i];
@@ -793,6 +797,8 @@ int drm_fb_helper_init(struct drm_device *dev,
 	struct drm_mode_config *config = &dev->mode_config;
 	int i;
 
+	pr_info("LINH drmfb %s(): DBG crtc_count %d, max conn %d\n", __func__, fb_helper->crtc_count, max_conn_count);
+
 	if (!drm_fbdev_emulation) {
 		dev->fb_helper = fb_helper;
 		return 0;
@@ -828,6 +834,7 @@ int drm_fb_helper_init(struct drm_device *dev,
 	i = 0;
 	drm_for_each_crtc(crtc, dev) {
 		fb_helper->crtc_info[i].mode_set.crtc = crtc;
+		pr_info("LINH drmfb %s(): DBG crtc %d, %s, en %d\n", __func__, i, crtc->name, crtc->enabled);
 		i++;
 	}
 

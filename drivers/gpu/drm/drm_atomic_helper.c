@@ -1074,15 +1074,26 @@ void drm_atomic_helper_commit_modeset_enables(struct drm_device *dev,
 	struct drm_connector_state *new_conn_state;
 	int i;
 
+	// pr_info("LINH drm %s(): DBG \n", __func__);
+
 	for_each_oldnew_crtc_in_state(old_state, crtc, old_crtc_state, new_crtc_state, i) {
 		const struct drm_crtc_helper_funcs *funcs;
 
+		// pr_info("LINH drm %s(): DBG old %p, new %p\n", __func__, old_crtc_state, new_crtc_state);
+		// pr_info("LINH drm %s(): DBG OLD en %d, active %d, plane_change %d, mode change %d, act change %d\n", __func__, old_crtc_state->enable, old_crtc_state->active, old_crtc_state->planes_changed, old_crtc_state->mode_changed, old_crtc_state->active_changed);
+		// pr_info("LINH drm %s(): DBG clock %d, hact %d, vact %d\n", __func__, old_crtc_state->mode.clock, old_crtc_state->mode.hdisplay, old_crtc_state->mode.vdisplay);
+		// pr_info("LINH drm %s(): DBG NEW en %d, active %d, plane_change %d, mode change %d, act change %d\n", __func__, new_crtc_state->enable, new_crtc_state->active, new_crtc_state->planes_changed, new_crtc_state->mode_changed, new_crtc_state->active_changed);
+		// pr_info("LINH drm %s(): DBG clock %d, hact %d, vact %d\n", __func__, new_crtc_state->mode.clock, new_crtc_state->mode.hdisplay, new_crtc_state->mode.vdisplay);
 		/* Need to filter out CRTCs where only planes change. */
-		if (!drm_atomic_crtc_needs_modeset(new_crtc_state))
+		if (!drm_atomic_crtc_needs_modeset(new_crtc_state)) {
+			// pr_info("LINH drm %s(): DBG no need modeset\n", __func__);
 			continue;
+		}
 
-		if (!new_crtc_state->active)
+		if (!new_crtc_state->active) {
+			// pr_info("LINH drm %s(): DBG new not active\n", __func__);
 			continue;
+		}
 
 		funcs = crtc->helper_private;
 

@@ -39,6 +39,7 @@ drm_simple_kms_crtc_mode_valid(struct drm_crtc *crtc,
 			       const struct drm_display_mode *mode)
 {
 	struct drm_simple_display_pipe *pipe;
+	pr_info("LINH drm bridge %s(): DBG mode clock %u\n", __func__, mode->clock);
 
 	pipe = container_of(crtc, struct drm_simple_display_pipe, crtc);
 	if (!pipe->funcs || !pipe->funcs->mode_valid)

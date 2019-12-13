@@ -402,6 +402,8 @@ struct drm_fbdev_cma *drm_fbdev_cma_init_with_funcs(struct drm_device *dev,
 	struct drm_fb_helper *helper;
 	int ret;
 
+	pr_info("LINH drmfbdev %s(): DBG max conn %d, preferred_bpp %u\n", __func__, max_conn_count, preferred_bpp);
+
 	fbdev_cma = kzalloc(sizeof(*fbdev_cma), GFP_KERNEL);
 	if (!fbdev_cma) {
 		dev_err(dev->dev, "Failed to allocate drm fbdev.\n");

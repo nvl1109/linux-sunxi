@@ -497,6 +497,7 @@ void dcss_dtg_sync_set(struct dcss_soc *dcss, struct videomode *vm)
 	u32 pixclock = vm->pixelclock;
 	u32 actual_clk;
 
+	pr_info("LINH dcss-dtg %s(): DBG pixclock %u, pixclk %d\n", __func__, pixclock, clk_get_rate(dcss->pix_clk));
 	dev_dbg(dcss->dev, "hfront_porch = %d\n", vm->hfront_porch);
 	dev_dbg(dcss->dev, "hback_porch = %d\n", vm->hback_porch);
 	dev_dbg(dcss->dev, "hsync_len = %d\n", vm->hsync_len);
