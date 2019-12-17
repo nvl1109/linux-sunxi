@@ -109,6 +109,7 @@ static int rmi_i2c_write_block(struct rmi_transport_dev *xport, u16 addr,
 			goto exit;
 	}
 
+	print_dbg("addr 0x%02x, offset 0x%02x, page %d, len %d, %02x %02x", client->addr, addr, rmi_i2c->page, tx_size, rmi_i2c->tx_buf[1], rmi_i2c->tx_buf[2]);
 	retval = i2c_master_send(client, rmi_i2c->tx_buf, tx_size);
 	if (retval == tx_size)
 		retval = 0;
@@ -153,7 +154,7 @@ static int rmi_i2c_read_block(struct rmi_transport_dev *xport, u16 addr,
 		if (retval)
 			goto exit;
 	}
-
+	print_dbg("addr 0x%02x, off 0x%02x, len %d", client->addr, addr_offset, len);
 	retval = i2c_transfer(client->adapter, msgs, ARRAY_SIZE(msgs));
 	if (retval == ARRAY_SIZE(msgs))
 		retval = 0; /* success */

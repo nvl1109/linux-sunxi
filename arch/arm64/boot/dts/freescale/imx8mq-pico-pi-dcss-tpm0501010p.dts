@@ -1,0 +1,194 @@
+/*
+ * Copyright 2019 Linh Nguyen <nvl1109@gmail.com>
+ */
+
+/dts-v1/;
+
+#include "imx8mq-pico-pi.dts"
+
+/ {
+	sound-hdmi {
+		status = "disabled";
+	};
+
+	/* PCS was fixed the brightness level, so just enable it */
+	backlight_mipi {
+		status = "okay";
+		default-brightness-level = <6>;
+	};
+};
+
+/delete-node/ &hdmi_port;
+
+&hdmi {
+	status = "disabled";
+};
+
+&dcss {
+	status = "okay";
+	disp-dev = "mipi_disp";
+
+	clocks = <&clk IMX8MQ_CLK_DISP_APB_ROOT>,
+		 <&clk IMX8MQ_CLK_DISP_AXI_ROOT>,
+		 <&clk IMX8MQ_CLK_DISP_RTRM_ROOT>,
+		 <&clk IMX8MQ_CLK_DC_PIXEL>,
+		 <&clk IMX8MQ_CLK_DISP_DTRC>;
+	clock-names = "apb", "axi", "rtrm", "pix", "dtrc";
+	assigned-clocks = <&clk IMX8MQ_CLK_DC_PIXEL>,
+			  <&clk IMX8MQ_CLK_DISP_AXI>,
+			  <&clk IMX8MQ_CLK_DISP_RTRM>;
+	assigned-clock-parents = <&clk IMX8MQ_VIDEO_PLL1_OUT>,
+				 <&clk IMX8MQ_SYS1_PLL_800M>,
+				 <&clk IMX8MQ_SYS1_PLL_800M>;
+	assigned-clock-rates = <600000000>,
+			       <800000000>,
+			       <400000000>;
+
+	dcss_port: port@0 {
+		reg = <0>;
+
+		dcss_disp0_mipi_dsi: endpoint {
+			remote-endpoint = <&mipi_dsi_in>;
+		};
+	};
+};
+
+&mipi_dsi_phy {
+	status = "okay";
+};
+
+&mipi_dsi {
+	status = "okay";
+
+	port@1 {
+		mipi_dsi_in: endpoint {
+			remote-endpoint = <&dcss_disp0_mipi_dsi>;
+		};
+	};
+
+};
+
+&mipi_dsi_bridge {
+	status = "okay";
+	clock-drop-level = <2>;
+
+	panel@0 {
+		compatible = "jdi,tpm0501010p";
+		reg = <0>;
+		pinctrl-0 = <&pinctrl_mipi_dsi_en &pinctrl_mipi_dsi_rst>;
+		reset-gpio = <&gpio3 17 GPIO_ACTIVE_LOW>;
+		tpreset-gpio = <&gpio3 18 GPIO_ACTIVE_LOW>;
+		dsi-lanes = <4>;
+		video-mode = <2>;
+		panel-width-mm = <62>;
+		panel-height-mm = <110>;
+
+		display-timings {
+			/*timing {
+				clock-frequency = <132000000>;
+				hactive = <1080>;
+				vactive = <1920>;
+				hfront-porch = <20>;
+				hsync-len = <2>;
+				hback-porch = <34>;
+				vfront-porch = <10>;
+				vsync-len = <5>;
+				vback-porch = <4>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <0>;
+				pixelclk-active = <0>;
+			};*/
+			timing {
+				clock-frequency = <148500000>;
+				hactive = <1080>;
+				vactive = <1920>;
+				hsync-len = <5>;
+				hback-porch = <51>;
+				hfront-porch = <60>;
+				vsync-len = <5>;
+				vback-porch = <31>;
+				vfront-porch = <19>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <0>;
+				pixelclk-active = <0>;
+			};
+			/*timing {
+				clock-frequency = <74250000>;
+				hactive = <1080>;
+				vactive = <1920>;
+				hsync-len = <22>;
+				hback-porch = <85>;
+				hfront-porch = <82>;
+
+				vsync-len = <10>;
+				vback-porch = <10>;
+				vfront-porch = <11>;
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <0>;
+				pixelclk-active = <0>;
+			};*/
+		};
+
+		port {
+			panel1_in: endpoint {
+				remote-endpoint = <&mipi_dsi_bridge_out>;
+			};
+		};
+	};
+
+	port@2 {
+		mipi_dsi_bridge_out: endpoint {
+			remote-endpoint = <&panel1_in>;
+		};
+	};
+};
+
+&iomuxc {
+	imx8mq-evk {
+		pinctrl_mipi_dsi_en: mipi_dsi_en {
+			fsl,pins = <
+				MX8MQ_IOMUXC_GPIO1_IO08_GPIO1_IO8	0x16
+			>;
+		};
+
+	};
+};
+
+&i2c3 {
+	touchscreen@20 {
+		compatible = "syna,rmi4-i2c";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_touch_rst &pinctrl_touch_irq>;
+		reg = <0x20>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <7 IRQ_TYPE_EDGE_FALLING>;
+		syna,reset-delay-ms = <10>;
+		syna,startup-delay-ms = <10>;
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		rmi4-f01@1 {
+			reg = <0x1>;
+			syna,nosleep-mode = <2>;
+		};
+
+		rmi4-f11@11 {
+			reg = <0x11>;
+			touchscreen-inverted-y;
+			touchscreen-swapped-x-y;
+			syna,sensor-type = <1>;
+
+		};
+
+		rmi4-f12@12 {
+			reg = <0x12>;
+			touchscreen-inverted-y;
+			touchscreen-swapped-x-y;
+			syna,sensor-type = <1>;
+		};
+	};
+};

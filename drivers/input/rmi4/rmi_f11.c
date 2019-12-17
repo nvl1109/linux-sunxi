@@ -735,6 +735,7 @@ static int f11_read_control_regs(struct rmi_function *fn,
 	int error = 0;
 
 	ctrl->ctrl0_11_address = ctrl_base_addr;
+	print_dbg("read ctrl %x", ctrl_base_addr);
 	error = rmi_read_block(rmi_dev, ctrl_base_addr, ctrl->ctrl0_11,
 				RMI_F11_CTRL_REG_COUNT);
 	if (error < 0) {
@@ -753,6 +754,7 @@ static int f11_write_control_regs(struct rmi_function *fn,
 	struct rmi_device *rmi_dev = fn->rmi_dev;
 	int error;
 
+	print_dbg("write ctrl %x", ctrl_base_addr);
 	error = rmi_write_block(rmi_dev, ctrl_base_addr, ctrl->ctrl0_11,
 				RMI_F11_CTRL_REG_COUNT);
 	if (error < 0)
@@ -771,6 +773,7 @@ static int rmi_f11_get_query_parameters(struct rmi_device *rmi_dev,
 	u8 query_buf[RMI_F11_QUERY_SIZE];
 	bool has_query36 = false;
 
+	print_dbg("read query %x", query_base_addr);
 	rc = rmi_read_block(rmi_dev, query_base_addr, query_buf,
 				RMI_F11_QUERY_SIZE);
 	if (rc < 0)
@@ -794,6 +797,7 @@ static int rmi_f11_get_query_parameters(struct rmi_device *rmi_dev,
 	query_size = RMI_F11_QUERY_SIZE;
 
 	if (sensor_query->has_abs) {
+		print_dbg("read query abs %x", query_base_addr + query_size);
 		rc = rmi_read(rmi_dev, query_base_addr + query_size, query_buf);
 		if (rc < 0)
 			return rc;
@@ -816,6 +820,7 @@ static int rmi_f11_get_query_parameters(struct rmi_device *rmi_dev,
 	}
 
 	if (sensor_query->has_rel) {
+		print_dbg("read query rel %x", query_base_addr + query_size);
 		rc = rmi_read(rmi_dev, query_base_addr + query_size,
 					&sensor_query->f11_2d_query6);
 		if (rc < 0)
@@ -824,6 +829,7 @@ static int rmi_f11_get_query_parameters(struct rmi_device *rmi_dev,
 	}
 
 	if (sensor_query->has_gestures) {
+		print_dbg("read gesture %x", query_base_addr + query_size);
 		rc = rmi_read_block(rmi_dev, query_base_addr + query_size,
 					query_buf, RMI_F11_QUERY_GESTURE_SIZE);
 		if (rc < 0)
@@ -871,6 +877,7 @@ static int rmi_f11_get_query_parameters(struct rmi_device *rmi_dev,
 	}
 
 	if (f11->has_query9) {
+		print_dbg("read query 9 %x", query_base_addr + query_size);
 		rc = rmi_read(rmi_dev, query_base_addr + query_size, query_buf);
 		if (rc < 0)
 			return rc;
@@ -896,6 +903,7 @@ static int rmi_f11_get_query_parameters(struct rmi_device *rmi_dev,
 	}
 
 	if (sensor_query->has_touch_shapes) {
+		print_dbg("read query touch shape %x", query_base_addr + query_size);
 		rc = rmi_read(rmi_dev, query_base_addr + query_size, query_buf);
 		if (rc < 0)
 			return rc;
@@ -907,6 +915,7 @@ static int rmi_f11_get_query_parameters(struct rmi_device *rmi_dev,
 	}
 
 	if (f11->has_query11) {
+		print_dbg("read query 11 %x", query_base_addr + query_size);
 		rc = rmi_read(rmi_dev, query_base_addr + query_size, query_buf);
 		if (rc < 0)
 			return rc;
@@ -933,6 +942,7 @@ static int rmi_f11_get_query_parameters(struct rmi_device *rmi_dev,
 	}
 
 	if (f11->has_query12) {
+		print_dbg("read query 12 %x", query_base_addr + query_size);
 		rc = rmi_read(rmi_dev, query_base_addr + query_size, query_buf);
 		if (rc < 0)
 			return rc;
@@ -958,6 +968,7 @@ static int rmi_f11_get_query_parameters(struct rmi_device *rmi_dev,
 	}
 
 	if (sensor_query->has_jitter_filter) {
+		print_dbg("read query jit fil %x", query_base_addr + query_size);
 		rc = rmi_read(rmi_dev, query_base_addr + query_size, query_buf);
 		if (rc < 0)
 			return rc;
@@ -972,6 +983,7 @@ static int rmi_f11_get_query_parameters(struct rmi_device *rmi_dev,
 	}
 
 	if (sensor_query->has_info2) {
+		print_dbg("read query info2 %x", query_base_addr + query_size);
 		rc = rmi_read(rmi_dev, query_base_addr + query_size, query_buf);
 		if (rc < 0)
 			return rc;
@@ -993,6 +1005,7 @@ static int rmi_f11_get_query_parameters(struct rmi_device *rmi_dev,
 	}
 
 	if (sensor_query->has_physical_props) {
+		print_dbg("read query phy prop %x", query_base_addr + query_size);
 		rc = rmi_read_block(rmi_dev, query_base_addr
 			+ query_size, query_buf, 4);
 		if (rc < 0)
@@ -1014,6 +1027,7 @@ static int rmi_f11_get_query_parameters(struct rmi_device *rmi_dev,
 		++query_size;
 
 	if (f11->has_query28) {
+		print_dbg("read query 28 %x", query_base_addr + query_size);
 		rc = rmi_read(rmi_dev, query_base_addr + query_size,
 				query_buf);
 		if (rc < 0)
@@ -1024,6 +1038,7 @@ static int rmi_f11_get_query_parameters(struct rmi_device *rmi_dev,
 
 	if (has_query36) {
 		query_size += 2;
+		print_dbg("read query 36 %x", query_base_addr + query_size);
 		rc = rmi_read(rmi_dev, query_base_addr + query_size,
 				query_buf);
 		if (rc < 0)
@@ -1088,6 +1103,7 @@ static int rmi_f11_initialize(struct rmi_function *fn)
 	query_base_addr = fn->fd.query_base_addr;
 	control_base_addr = fn->fd.control_base_addr;
 
+	print_dbg("read query %x", query_base_addr);
 	rc = rmi_read(rmi_dev, query_base_addr, &buf);
 	if (rc < 0)
 		return rc;
@@ -1157,12 +1173,14 @@ static int rmi_f11_initialize(struct rmi_function *fn)
 		 */
 		sensor->report_rel = f11->sens_query.has_rel;
 
+	print_dbg("read max x pos %x", control_base_addr + F11_CTRL_SENSOR_MAX_X_POS_OFFSET);
 	rc = rmi_read_block(rmi_dev,
 		control_base_addr + F11_CTRL_SENSOR_MAX_X_POS_OFFSET,
 		(u8 *)&max_x_pos, sizeof(max_x_pos));
 	if (rc < 0)
 		return rc;
 
+	print_dbg("read max y pos %x", control_base_addr + F11_CTRL_SENSOR_MAX_Y_POS_OFFSET);
 	rc = rmi_read_block(rmi_dev,
 		control_base_addr + F11_CTRL_SENSOR_MAX_Y_POS_OFFSET,
 		(u8 *)&max_y_pos, sizeof(max_y_pos));
@@ -1276,6 +1294,7 @@ static irqreturn_t rmi_f11_attention(int irq, void *ctx)
 	int error;
 	int valid_bytes = f11->sensor.pkt_size;
 
+	print_dbg("irq %d", irq);
 	if (drvdata->attn_data.data) {
 		/*
 		 * The valid data in the attention report is less then
@@ -1290,6 +1309,7 @@ static irqreturn_t rmi_f11_attention(int irq, void *ctx)
 		drvdata->attn_data.data += f11->sensor.attn_size;
 		drvdata->attn_data.size -= f11->sensor.attn_size;
 	} else {
+		print_dbg("read data %x", data_base_addr);
 		error = rmi_read_block(rmi_dev,
 				data_base_addr, f11->sensor.data_pkt,
 				f11->sensor.pkt_size);
@@ -1313,6 +1333,7 @@ static int rmi_f11_resume(struct rmi_function *fn)
 
 	mdelay(f11->rezero_wait_ms);
 
+	print_dbg("write cmd %x", fn->fd.command_base_addr);
 	error = rmi_write(fn->rmi_dev, fn->fd.command_base_addr,
 				RMI_F11_REZERO);
 	if (error) {

@@ -142,6 +142,7 @@ static int rmi_process_interrupt_requests(struct rmi_device *rmi_dev)
 		error = rmi_read_block(rmi_dev,
 				data->f01_container->fd.data_base_addr + 1,
 				data->irq_status, data->num_of_irq_regs);
+		print_dbg("+read irq status %x, len %d, val %x", data->f01_container->fd.data_base_addr + 1, data->num_of_irq_regs, data->irq_status[0]);
 		if (error < 0) {
 			dev_err(dev, "Failed to read irqs, code=%d\n", error);
 			return error;
@@ -157,11 +158,17 @@ static int rmi_process_interrupt_requests(struct rmi_device *rmi_dev)
 	 */
 	mutex_unlock(&data->irq_mutex);
 
+	print_dbg("irq_count %d", data->irq_count);
+	for (i = 0; i < data->irq_count; ++i) {
+		print_dbg("%d: status: %x", i, *data->irq_status);
+	}
 	for_each_set_bit(i, data->irq_status, data->irq_count)
 		handle_nested_irq(irq_find_mapping(data->irqdomain, i));
 
-	if (data->input)
+	if (data->input) {
+		print_dbg("input_sync %p", data->input);
 		input_sync(data->input);
+	}
 
 	return 0;
 }
@@ -377,6 +384,7 @@ static int rmi_driver_set_irq_bits(struct rmi_device *rmi_dev,
 	bitmap_or(data->new_irq_mask,
 		  data->current_irq_mask, mask, data->irq_count);
 
+	print_dbg("write %x len %d dat %x", data->f01_container->fd.control_base_addr + 1,data->num_of_irq_regs,data->new_irq_mask[0]);
 	error = rmi_write_block(rmi_dev,
 			data->f01_container->fd.control_base_addr + 1,
 			data->new_irq_mask, data->num_of_irq_regs);
@@ -404,6 +412,7 @@ static int rmi_driver_clear_irq_bits(struct rmi_device *rmi_dev,
 	bitmap_andnot(data->new_irq_mask,
 		  data->current_irq_mask, mask, data->irq_count);
 
+	print_dbg("write %x len %d dat %x", data->f01_container->fd.control_base_addr + 1,data->num_of_irq_regs,data->new_irq_mask[0]);
 	error = rmi_write_block(rmi_dev,
 			data->f01_container->fd.control_base_addr + 1,
 			data->new_irq_mask, data->num_of_irq_regs);
@@ -435,6 +444,7 @@ static int rmi_driver_reset_handler(struct rmi_device *rmi_dev)
 		return 0;
 	}
 
+	print_dbg("read irq status %x, len %d", data->f01_container->fd.control_base_addr + 1, data->num_of_irq_regs);
 	error = rmi_read_block(rmi_dev,
 			       data->f01_container->fd.control_base_addr + 1,
 			       data->current_irq_mask, data->num_of_irq_regs);
@@ -461,6 +471,7 @@ static int rmi_read_pdt_entry(struct rmi_device *rmi_dev,
 	u8 buf[RMI_PDT_ENTRY_SIZE];
 	int error;
 
+	print_dbg("read pdt %x", pdt_address);
 	error = rmi_read_block(rmi_dev, pdt_address, buf, RMI_PDT_ENTRY_SIZE);
 	if (error) {
 		dev_err(&rmi_dev->dev, "Read PDT entry at %#06x failed, code: %d.\n",
@@ -749,6 +760,7 @@ static int rmi_check_bootloader_mode(struct rmi_device *rmi_dev,
 
 	if (pdt->function_number == 0x34 && pdt->function_version > 1) {
 		ret = rmi_read(rmi_dev, pdt->data_base_addr, &status);
+		print_dbg("+read f34 data %x, val %x", pdt->data_base_addr, status);
 		if (ret) {
 			dev_err(&rmi_dev->dev,
 				"Failed to read F34 status: %d.\n", ret);
@@ -759,6 +771,7 @@ static int rmi_check_bootloader_mode(struct rmi_device *rmi_dev,
 			data->bootloader_mode = true;
 	} else if (pdt->function_number == 0x01) {
 		ret = rmi_read(rmi_dev, pdt->data_base_addr, &status);
+		print_dbg("+read f01 data %x, val %x", pdt->data_base_addr, status);
 		if (ret) {
 			dev_err(&rmi_dev->dev,
 				"Failed to read F01 status: %d.\n", ret);
@@ -808,6 +821,7 @@ int rmi_initial_reset(struct rmi_device *rmi_dev, void *ctx,
 		}
 
 		rmi_dbg(RMI_DEBUG_CORE, &rmi_dev->dev, "Sending reset\n");
+		print_dbg("write reset %x len %d dat %x", cmd_addr, 1, cmd_buf);
 		error = rmi_write_block(rmi_dev, cmd_addr, &cmd_buf, 1);
 		if (error) {
 			dev_err(&rmi_dev->dev,
@@ -1089,6 +1103,7 @@ int rmi_init_functions(struct rmi_driver_data *data)
 	retval = rmi_read_block(rmi_dev,
 				data->f01_container->fd.control_base_addr + 1,
 				data->current_irq_mask, data->num_of_irq_regs);
+	print_dbg("+read irq %x, len %d, val %x", data->f01_container->fd.control_base_addr + 1, data->num_of_irq_regs, data->current_irq_mask[0]);
 	if (retval < 0) {
 		dev_err(dev, "%s: Failed to read current IRQ mask.\n",
 			__func__);
@@ -1164,6 +1179,7 @@ static int rmi_driver_probe(struct device *dev)
 		dev_warn(dev, "RMI initial reset failed! Continuing in spite of this.\n");
 
 	retval = rmi_read(rmi_dev, PDT_PROPERTIES_LOCATION, &data->pdt_props);
+	print_dbg("+read pdt loc %x -> val %x", PDT_PROPERTIES_LOCATION, data->pdt_props);
 	if (retval < 0) {
 		/*
 		 * we'll print out a warning and continue since

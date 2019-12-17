@@ -150,6 +150,7 @@ static int rmi_f01_read_properties(struct rmi_device *rmi_dev,
 	u16 prod_info_addr;
 	u8 ds4_query_len;
 
+	print_dbg("read query: %x", query_offset);
 	ret = rmi_read_block(rmi_dev, query_offset,
 			       queries, RMI_F01_BASIC_QUERY_LEN);
 	if (ret) {
@@ -189,6 +190,7 @@ static int rmi_f01_read_properties(struct rmi_device *rmi_dev,
 		query_offset++;
 
 	if (has_query42) {
+		print_dbg("read query: %x", query_offset);
 		ret = rmi_read(rmi_dev, query_offset, queries);
 		if (ret) {
 			dev_err(&rmi_dev->dev,
@@ -201,6 +203,7 @@ static int rmi_f01_read_properties(struct rmi_device *rmi_dev,
 	}
 
 	if (has_ds4_queries) {
+		print_dbg("read query: %x", query_offset);
 		ret = rmi_read(rmi_dev, query_offset, &ds4_query_len);
 		if (ret) {
 			dev_err(&rmi_dev->dev,
@@ -210,6 +213,7 @@ static int rmi_f01_read_properties(struct rmi_device *rmi_dev,
 		query_offset++;
 
 		if (ds4_query_len > 0) {
+			print_dbg("read query: %x", query_offset);
 			ret = rmi_read(rmi_dev, query_offset, queries);
 			if (ret) {
 				dev_err(&rmi_dev->dev,
@@ -223,6 +227,7 @@ static int rmi_f01_read_properties(struct rmi_device *rmi_dev,
 		}
 
 		if (has_package_id_query) {
+			print_dbg("read prod: %x", prod_info_addr);
 			ret = rmi_read_block(rmi_dev, prod_info_addr,
 					     queries, sizeof(__le64));
 			if (ret) {
@@ -237,6 +242,7 @@ static int rmi_f01_read_properties(struct rmi_device *rmi_dev,
 		}
 
 		if (has_build_id_query) {
+			print_dbg("read prod: %x", prod_info_addr);
 			ret = rmi_read_block(rmi_dev, prod_info_addr, queries,
 					    3);
 			if (ret) {
@@ -412,6 +418,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 
 	error = rmi_read(rmi_dev, fn->fd.control_base_addr,
 			 &f01->device_control.ctrl0);
+	print_dbg("+read ctrl0 %x = %x", fn->fd.control_base_addr, f01->device_control.ctrl0);
 	if (error) {
 		dev_err(&fn->dev, "Failed to read F01 control: %d\n", error);
 		return error;
@@ -442,6 +449,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 
 	f01->device_control.ctrl0 |= RMI_F01_CTRL0_CONFIGURED_BIT;
 
+	print_dbg("write ctrl0 addr %x = %x", fn->fd.control_base_addr, f01->device_control.ctrl0);
 	error = rmi_write(rmi_dev, fn->fd.control_base_addr,
 			  f01->device_control.ctrl0);
 	if (error) {
@@ -451,6 +459,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 
 	/* Dummy read in order to clear irqs */
 	error = rmi_read(rmi_dev, fn->fd.data_base_addr + 1, &temp);
+	print_dbg("+read irqs %x = %x", fn->fd.data_base_addr + 1, temp);
 	if (error < 0) {
 		dev_err(&fn->dev, "Failed to read Interrupt Status.\n");
 		return error;
@@ -479,6 +488,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 		if (pdata->power_management.doze_interval) {
 			f01->device_control.doze_interval =
 				pdata->power_management.doze_interval;
+			print_dbg("write doze addr %x, val %x", f01->doze_interval_addr, f01->device_control.doze_interval);
 			error = rmi_write(rmi_dev, f01->doze_interval_addr,
 					  f01->device_control.doze_interval);
 			if (error) {
@@ -488,6 +498,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 				return error;
 			}
 		} else {
+			print_dbg("read doze %x", f01->doze_interval_addr);
 			error = rmi_read(rmi_dev, f01->doze_interval_addr,
 					 &f01->device_control.doze_interval);
 			if (error) {
@@ -504,6 +515,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 		if (pdata->power_management.wakeup_threshold) {
 			f01->device_control.wakeup_threshold =
 				pdata->power_management.wakeup_threshold;
+			print_dbg("Write wakeup thres %x, %x", f01->wakeup_threshold_addr, f01->device_control.wakeup_threshold);
 			error = rmi_write(rmi_dev, f01->wakeup_threshold_addr,
 					  f01->device_control.wakeup_threshold);
 			if (error) {
@@ -513,6 +525,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 				return error;
 			}
 		} else {
+			print_dbg("read wakeup thres: %x", f01->wakeup_threshold_addr);
 			error = rmi_read(rmi_dev, f01->wakeup_threshold_addr,
 					 &f01->device_control.wakeup_threshold);
 			if (error < 0) {
@@ -534,6 +547,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 		if (pdata->power_management.doze_holdoff) {
 			f01->device_control.doze_holdoff =
 				pdata->power_management.doze_holdoff;
+			print_dbg("write doze holdoff: %x", f01->doze_holdoff_addr, f01->device_control.doze_holdoff);
 			error = rmi_write(rmi_dev, f01->doze_holdoff_addr,
 					  f01->device_control.doze_holdoff);
 			if (error) {
@@ -543,6 +557,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 				return error;
 			}
 		} else {
+			print_dbg("read doze holdoff: %x", f01->doze_holdoff_addr);
 			error = rmi_read(rmi_dev, f01->doze_holdoff_addr,
 					 &f01->device_control.doze_holdoff);
 			if (error) {
@@ -554,6 +569,7 @@ static int rmi_f01_probe(struct rmi_function *fn)
 		}
 	}
 
+	print_dbg("read status: %x", fn->fd.data_base_addr);
 	error = rmi_read(rmi_dev, fn->fd.data_base_addr, &device_status);
 	if (error < 0) {
 		dev_err(&fn->dev,
@@ -588,6 +604,7 @@ static int rmi_f01_config(struct rmi_function *fn)
 	struct f01_data *f01 = dev_get_drvdata(&fn->dev);
 	int error;
 
+	print_dbg("write ctrl0: %x -> %x", fn->fd.control_base_addr, f01->device_control.ctrl0);
 	error = rmi_write(fn->rmi_dev, fn->fd.control_base_addr,
 			  f01->device_control.ctrl0);
 	if (error) {
@@ -597,6 +614,7 @@ static int rmi_f01_config(struct rmi_function *fn)
 	}
 
 	if (f01->properties.has_adjustable_doze) {
+		print_dbg("write doze interval: %x -> %x", f01->doze_interval_addr, f01->device_control.doze_interval);
 		error = rmi_write(fn->rmi_dev, f01->doze_interval_addr,
 				  f01->device_control.doze_interval);
 		if (error) {
@@ -605,6 +623,7 @@ static int rmi_f01_config(struct rmi_function *fn)
 			return error;
 		}
 
+		print_dbg("write wakeup thres: %x -> %x", f01->wakeup_threshold_addr, f01->device_control.wakeup_threshold);
 		error = rmi_write_block(fn->rmi_dev,
 					 f01->wakeup_threshold_addr,
 					 &f01->device_control.wakeup_threshold,
@@ -618,6 +637,7 @@ static int rmi_f01_config(struct rmi_function *fn)
 	}
 
 	if (f01->properties.has_adjustable_doze_holdoff) {
+		print_dbg("write doze holdoff: %x -> %x", f01->doze_holdoff_addr, f01->device_control.doze_holdoff);
 		error = rmi_write(fn->rmi_dev, f01->doze_holdoff_addr,
 				  f01->device_control.doze_holdoff);
 		if (error) {
@@ -645,6 +665,7 @@ static int rmi_f01_suspend(struct rmi_function *fn)
 	else
 		f01->device_control.ctrl0 |= RMI_SLEEP_MODE_SENSOR_SLEEP;
 
+	print_dbg("write ctrl0: %x -> %x", fn->fd.control_base_addr, f01->device_control.ctrl0);
 	error = rmi_write(fn->rmi_dev, fn->fd.control_base_addr,
 			  f01->device_control.ctrl0);
 	if (error) {
@@ -670,6 +691,7 @@ static int rmi_f01_resume(struct rmi_function *fn)
 	f01->device_control.ctrl0 &= ~RMI_F01_CTRL0_SLEEP_MODE_MASK;
 	f01->device_control.ctrl0 |= RMI_SLEEP_MODE_NORMAL;
 
+	print_dbg("write ctrl0: %x -> %x", fn->fd.control_base_addr, f01->device_control.ctrl0);
 	error = rmi_write(fn->rmi_dev, fn->fd.control_base_addr,
 			  f01->device_control.ctrl0);
 	if (error) {
@@ -688,6 +710,7 @@ static irqreturn_t rmi_f01_attention(int irq, void *ctx)
 	int error;
 	u8 device_status;
 
+	print_dbg("read status: %x", fn->fd.data_base_addr);
 	error = rmi_read(rmi_dev, fn->fd.data_base_addr, &device_status);
 	if (error) {
 		dev_err(&fn->dev,

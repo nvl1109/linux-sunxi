@@ -91,6 +91,7 @@ static int rmi_f12_read_sensor_tuning(struct f12_data *f12)
 		return -ENODEV;
 	}
 
+	print_dbg("read ctrl %x (off %x)", fn->fd.control_base_addr + offset, offset);
 	ret = rmi_read_block(rmi_dev, fn->fd.control_base_addr + offset, buf,
 				item->reg_size);
 	if (ret)
@@ -207,6 +208,7 @@ static irqreturn_t rmi_f12_attention(int irq, void *ctx)
 	struct rmi_2d_sensor *sensor = &f12->sensor;
 	int valid_bytes = sensor->pkt_size;
 
+	print_dbg("irq %d", irq);
 	if (drvdata->attn_data.data) {
 		if (sensor->attn_size > drvdata->attn_data.size)
 			valid_bytes = drvdata->attn_data.size;
@@ -217,6 +219,7 @@ static irqreturn_t rmi_f12_attention(int irq, void *ctx)
 		drvdata->attn_data.data += sensor->attn_size;
 		drvdata->attn_data.size -= sensor->attn_size;
 	} else {
+		print_dbg("read data %x", f12->data_addr);
 		retval = rmi_read_block(rmi_dev, f12->data_addr,
 					sensor->data_pkt, sensor->pkt_size);
 		if (retval < 0) {
@@ -261,6 +264,7 @@ static int rmi_f12_write_control_regs(struct rmi_function *fn)
 			 */
 			control_size = min(item->reg_size, 3UL);
 
+			print_dbg("read ctrl %x (off %x)", fn->fd.control_base_addr + control_offset, control_offset);
 			ret = rmi_read_block(rmi_dev, fn->fd.control_base_addr
 					+ control_offset, buf, control_size);
 			if (ret)
@@ -281,6 +285,7 @@ static int rmi_f12_write_control_regs(struct rmi_function *fn)
 				break;
 			}
 
+			print_dbg("write cmd %x", fn->fd.control_base_addr + control_offset);
 			ret = rmi_write_block(rmi_dev,
 				fn->fd.control_base_addr + control_offset,
 				buf, control_size);
@@ -323,6 +328,7 @@ static int rmi_f12_probe(struct rmi_function *fn)
 
 	rmi_dbg(RMI_DEBUG_FN, &fn->dev, "%s\n", __func__);
 
+	print_dbg("read query %x", query_addr);
 	ret = rmi_read(fn->rmi_dev, query_addr, &buf);
 	if (ret < 0) {
 		dev_err(&fn->dev, "Failed to read general info register: %d\n",
@@ -351,6 +357,7 @@ static int rmi_f12_probe(struct rmi_function *fn)
 		f12->sensor_pdata = pdata->sensor_pdata;
 	}
 
+	print_dbg("read reg desc %x", query_addr);
 	ret = rmi_read_register_desc(rmi_dev, query_addr,
 					&f12->query_reg_desc);
 	if (ret) {
@@ -361,6 +368,7 @@ static int rmi_f12_probe(struct rmi_function *fn)
 	}
 	query_addr += 3;
 
+	print_dbg("read reg desc %x", query_addr);
 	ret = rmi_read_register_desc(rmi_dev, query_addr,
 						&f12->control_reg_desc);
 	if (ret) {
@@ -371,6 +379,7 @@ static int rmi_f12_probe(struct rmi_function *fn)
 	}
 	query_addr += 3;
 
+	print_dbg("read reg desc %x", query_addr);
 	ret = rmi_read_register_desc(rmi_dev, query_addr,
 						&f12->data_reg_desc);
 	if (ret) {
