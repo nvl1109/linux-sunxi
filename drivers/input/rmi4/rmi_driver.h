@@ -17,7 +17,7 @@
 #include "rmi_bus.h"
 
 
-#define __DEBUG 0
+#define __DEBUG 1
 #define __DBG_INFO 1
 #if __DEBUG
 #define print_dbg(fmt,args...) pr_info("LINH rmi %s(): DBG " fmt "\n", __func__, ##args)

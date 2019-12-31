@@ -614,6 +614,7 @@ static int rmi_f54_config(struct rmi_function *fn)
 {
 	struct rmi_driver *drv = fn->rmi_dev->driver;
 
+	print_dbg("set_irq_bits");
 	drv->set_irq_bits(fn->rmi_dev, fn->irq_mask);
 
 	return 0;
@@ -663,6 +664,7 @@ static int rmi_f54_probe(struct rmi_function *fn)
 	int ret;
 	u8 rx, tx;
 
+	print_dbg("");
 	f54 = devm_kzalloc(&fn->dev, sizeof(struct f54_data), GFP_KERNEL);
 	if (!f54)
 		return -ENOMEM;
@@ -725,6 +727,8 @@ static int rmi_f54_probe(struct rmi_function *fn)
 		goto remove_v4l2;
 	}
 
+	print_dbg("probe OK");
+
 	return 0;
 
 remove_v4l2:
@@ -733,6 +737,7 @@ remove_wq:
 	cancel_delayed_work_sync(&f54->work);
 	flush_workqueue(f54->workqueue);
 	destroy_workqueue(f54->workqueue);
+	print_err("probe failed");
 	return ret;
 }
 

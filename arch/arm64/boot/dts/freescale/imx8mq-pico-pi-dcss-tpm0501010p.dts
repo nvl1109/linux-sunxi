@@ -88,12 +88,12 @@
 				clock-frequency = <132000000>;
 				hactive = <1080>;
 				vactive = <1920>;
-				hfront-porch = <20>;
 				hsync-len = <2>;
 				hback-porch = <34>;
-				vfront-porch = <10>;
+				hfront-porch = <20>;
 				vsync-len = <5>;
 				vback-porch = <4>;
+				vfront-porch = <10>;
 				hsync-active = <0>;
 				vsync-active = <0>;
 				de-active = <0>;
@@ -103,12 +103,12 @@
 				clock-frequency = <148500000>;
 				hactive = <1080>;
 				vactive = <1920>;
-				hsync-len = <5>;
-				hback-porch = <51>;
-				hfront-porch = <60>;
-				vsync-len = <5>;
-				vback-porch = <31>;
-				vfront-porch = <19>;
+				hsync-len = <15>;
+				hback-porch = <15>;
+				hfront-porch = <90>;
+				vsync-len = <8>;
+				vback-porch = <8>;
+				vfront-porch = <35>;
 				hsync-active = <0>;
 				vsync-active = <0>;
 				de-active = <0>;
@@ -161,12 +161,12 @@
 	touchscreen@20 {
 		compatible = "syna,rmi4-i2c";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_touch_rst &pinctrl_touch_irq>;
+		pinctrl-0 = <&pinctrl_touch_irq>;
 		reg = <0x20>;
 		interrupt-parent = <&gpio1>;
 		interrupts = <7 IRQ_TYPE_EDGE_FALLING>;
-		syna,reset-delay-ms = <10>;
-		syna,startup-delay-ms = <10>;
+		syna,reset-delay-ms = <100>;
+		syna,startup-delay-ms = <100>;
 
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -181,7 +181,6 @@
 			touchscreen-inverted-y;
 			touchscreen-swapped-x-y;
 			syna,sensor-type = <1>;
-
 		};
 
 		rmi4-f12@12 {

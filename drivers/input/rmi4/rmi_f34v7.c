@@ -495,6 +495,17 @@ static int rmi_f34v7_read_queries(struct f34_data *f34)
 			__func__);
 		return ret;
 	}
+	print_dbg("query_0                        %d", query_0);
+	print_dbg("bl_minor_revision              %d", query_1_7.bl_minor_revision);
+	print_dbg("bl_major_revision              %d", query_1_7.bl_major_revision);
+	print_dbg("bl_fw_id                       %d", query_1_7.bl_fw_id);
+	print_dbg("minimum_write_size             %d", query_1_7.minimum_write_size);
+	print_dbg("block_size                     %d", query_1_7.block_size);
+	print_dbg("flash_page_size                %d", query_1_7.flash_page_size);
+	print_dbg("adjustable_partition_area_size %d", query_1_7.adjustable_partition_area_size);
+	print_dbg("flash_config_length            %d", query_1_7.flash_config_length);
+	print_dbg("payload_length                 %d", query_1_7.payload_length);
+	print_dbg("partition_support              %x-%x-%x-%x", query_1_7.partition_support[0], query_1_7.partition_support[1], query_1_7.partition_support[2], query_1_7.partition_support[3]);
 
 	f34->bootloader_id[0] = query_1_7.bl_minor_revision;
 	f34->bootloader_id[1] = query_1_7.bl_major_revision;
@@ -1282,6 +1293,7 @@ static int rmi_f34v7_enter_flash_prog(struct f34_data *f34)
 {
 	int ret;
 
+	print_dbg("set_irq_bits");
 	f34->fn->rmi_dev->driver->set_irq_bits(f34->fn->rmi_dev, f34->fn->irq_mask);
 
 	ret = rmi_f34v7_read_flash_status(f34);
@@ -1308,6 +1320,7 @@ int rmi_f34v7_start_reflash(struct f34_data *f34, const struct firmware *fw)
 {
 	int ret = 0;
 
+	print_dbg("set_irq_bits");
 	f34->fn->rmi_dev->driver->set_irq_bits(f34->fn->rmi_dev, f34->fn->irq_mask);
 
 	f34->v7.config_area = v7_UI_CONFIG_AREA;
@@ -1357,6 +1370,7 @@ int rmi_f34v7_probe(struct f34_data *f34)
 			__func__);
 		return ret;
 	}
+	print_dbg("base addr 0x%x", f34->fn->fd.query_base_addr + V7_BOOTLOADER_ID_OFFSET);
 
 	if (f34->bootloader_id[1] == '5') {
 		f34->bl_version = 5;
@@ -1365,8 +1379,10 @@ int rmi_f34v7_probe(struct f34_data *f34)
 	} else if (f34->bootloader_id[1] == 7) {
 		f34->bl_version = 7;
 	} else {
-		dev_err(&f34->fn->dev, "%s: Unrecognized bootloader version\n",
-				__func__);
+		dev_err(&f34->fn->dev, "%s: Unrecognized bootloader version %x-%x-%x-%x-%x\n",
+				__func__, f34->bootloader_id[0], f34->bootloader_id[1], f34->bootloader_id[2], f34->bootloader_id[3], f34->bootloader_id[4]);
+
+		ret = rmi_f34v7_read_queries(f34);
 		return -EINVAL;
 	}
 

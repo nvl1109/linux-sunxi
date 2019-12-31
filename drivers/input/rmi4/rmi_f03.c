@@ -159,6 +159,7 @@ static int rmi_f03_pt_open(struct serio *serio)
 			"%s: Consumed %*ph (%d) from PS2 guest\n",
 			__func__, ob_len, obs, ob_len);
 
+	print_dbg("set_irq_bits");
 	return fn->rmi_dev->driver->set_irq_bits(fn->rmi_dev, fn->irq_mask);
 }
 
@@ -238,6 +239,7 @@ static int rmi_f03_config(struct rmi_function *fn)
 		 * We must be re-configuring the sensor, just enable
 		 * interrupts for this function.
 		 */
+		print_dbg("set_irq_bits");
 		fn->rmi_dev->driver->set_irq_bits(fn->rmi_dev, fn->irq_mask);
 	}
 

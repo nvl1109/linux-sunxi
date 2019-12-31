@@ -218,6 +218,7 @@ static int rmi_i2c_probe(struct i2c_client *client,
 		*pdata = *client_pdata;
 
 	pdata->irq = client->irq;
+	print_dbg("irq: %d", pdata->irq);
 
 	rmi_dbg(RMI_DEBUG_XPORT, &client->dev, "Probing %s.\n",
 			dev_name(&client->dev));

@@ -194,6 +194,7 @@ static int rmi_f30_config(struct rmi_function *fn)
 			return error;
 		}
 
+		print_dbg("set_irq_bits");
 		drv->set_irq_bits(fn->rmi_dev, fn->irq_mask);
 	}
 

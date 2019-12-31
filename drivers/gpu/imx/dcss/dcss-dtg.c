@@ -289,6 +289,7 @@ void dcss_dtg_sync_set(struct dcss_soc *dcss, struct videomode *vm)
 	dev_info(dcss->dev, "vsync_len = %d\n", vm->vsync_len);
 	dev_info(dcss->dev, "vactive = %d\n", vm->vactive);
 	dev_info(dcss->dev, "pixelclock = %lu\n", vm->pixelclock);
+	dev_info(dcss->dev, "pix_clk = %lu\n", clk_get_rate(dcss->pix_clk));
 
 	dtg_lrc_x = vm->hfront_porch + vm->hback_porch + vm->hsync_len +
 		    vm->hactive - 1;

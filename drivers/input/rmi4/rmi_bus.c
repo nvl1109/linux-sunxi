@@ -184,6 +184,7 @@ static int rmi_create_function_irq(struct rmi_function *fn,
 
 		fn->irq[i] = irq_create_mapping(drvdata->irqdomain,
 						fn->irq_pos + i);
+		print_dbg("%d: irq %d, pos %d, mask 0x%x", i, fn->irq[i], fn->irq_pos + i, fn->irq_mask[0]);
 
 		irq_set_chip_data(fn->irq[i], fn);
 		irq_set_chip_and_handler(fn->irq[i], &rmi_irq_chip,

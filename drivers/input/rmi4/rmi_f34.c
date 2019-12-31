@@ -304,7 +304,7 @@ out:
 static int rmi_f34_status(struct rmi_function *fn)
 {
 	struct f34_data *f34 = dev_get_drvdata(&fn->dev);
-
+	printk("===L fn %p, dev %p, f34 %p\n", fn, &fn->dev, f34);
 	/*
 	 * The status is the percentage complete, or once complete,
 	 * zero for success or a negative return code.
@@ -499,6 +499,8 @@ static ssize_t rmi_driver_update_fw_status_show(struct device *dev,
 	struct rmi_driver_data *data = dev_get_drvdata(dev);
 	int update_status = 0;
 
+	dev_info(dev, "data = %p\n", data);
+
 	if (data->f34_container)
 		update_status = rmi_f34_status(data->f34_container);
 
@@ -536,8 +538,10 @@ static int rmi_f34_probe(struct rmi_function *fn)
 	dev_set_drvdata(&fn->dev, f34);
 
 	/* v5 code only supported version 0, try V7 probe */
-	if (version > 0)
+	if (version > 0) {
+		dev_info(&fn->dev, "f34 version %d, try v7\n", version);
 		return rmi_f34v7_probe(f34);
+	}
 
 	f34->bl_version = 5;
 

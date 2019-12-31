@@ -323,6 +323,7 @@ static int rmi_input_event(struct hid_device *hdev, u8 *data, int size)
 
 	local_irq_save(flags);
 
+	pr_info("LINH rmi-hid %s(): INF data %u - %u size %d\n", __func__, data[1], data[2], size - 2);
 	rmi_set_attn_data(rmi_dev, data[1], &data[2], size - 2);
 
 	generic_handle_irq(hdata->rmi_irq);
@@ -394,6 +395,7 @@ static int rmi_event(struct hid_device *hdev, struct hid_field *field,
 {
 	struct rmi_data *data = hid_get_drvdata(hdev);
 
+	pr_info("LINH rmi-hid %s(): INF value %x\n", __func__, value);
 	if ((data->device_flags & RMI_DEVICE) &&
 	    (field->application == HID_GD_POINTER ||
 	    field->application == HID_GD_MOUSE)) {
@@ -420,6 +422,7 @@ static void rmi_report(struct hid_device *hid, struct hid_report *report)
 	if (!(hid->claimed & HID_CLAIMED_INPUT))
 		return;
 
+	pr_info("LINH rmi-hid %s(): INF report %d\n", __func__, report->id);
 	switch (report->id) {
 	case RMI_READ_DATA_REPORT_ID:
 		/* fall-through */
@@ -729,6 +732,8 @@ start:
 		hid_err(hdev, "hw start failed\n");
 		return ret;
 	}
+
+	pr_info("LINH rmi-hid %s(): INF probe DONE\n", __func__);
 
 	return 0;
 }

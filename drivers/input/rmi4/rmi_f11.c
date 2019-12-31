@@ -1268,16 +1268,21 @@ static int rmi_f11_config(struct rmi_function *fn)
 
 	if (!sensor->report_abs)
 		drv->clear_irq_bits(fn->rmi_dev, f11->abs_mask);
-	else
+	else {
+		print_dbg("set_irq_bits");
 		drv->set_irq_bits(fn->rmi_dev, f11->abs_mask);
+	}
 
 	if (!sensor->report_rel)
 		drv->clear_irq_bits(fn->rmi_dev, f11->rel_mask);
-	else
+	else {
+		print_dbg("set_irq_bits");
 		drv->set_irq_bits(fn->rmi_dev, f11->rel_mask);
+	}
 
 	rc = f11_write_control_regs(fn, &f11->sens_query,
 			   &f11->dev_controls, fn->fd.query_base_addr);
+	print_inf("configured ret %d", rc);
 	if (rc < 0)
 		return rc;
 
@@ -1352,11 +1357,13 @@ static int rmi_f11_probe(struct rmi_function *fn)
 	struct f11_data *f11;
 
 	error = rmi_f11_initialize(fn);
+	print_inf("init ret %d", error);
 	if (error)
 		return error;
 
 	f11 = dev_get_drvdata(&fn->dev);
 	error = rmi_2d_sensor_configure_input(fn, &f11->sensor);
+	print_inf("2d configure ret %d", error);
 	if (error)
 		return error;
 

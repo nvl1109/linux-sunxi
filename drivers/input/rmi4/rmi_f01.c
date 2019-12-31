@@ -710,8 +710,14 @@ static irqreturn_t rmi_f01_attention(int irq, void *ctx)
 	int error;
 	u8 device_status;
 
-	print_dbg("read status: %x", fn->fd.data_base_addr);
+	error = rmi_read(rmi_dev, fn->fd.control_base_addr, &device_status);
+	print_dbg("+read ctrl0 ret %d, value 0x%x", error, device_status);
+
+	error = rmi_read(rmi_dev, fn->fd.control_base_addr + 1, &device_status);
+	print_dbg("+read ctrl1 ret %d, value 0x%x", error, device_status);
+
 	error = rmi_read(rmi_dev, fn->fd.data_base_addr, &device_status);
+	print_dbg("+read status: %x, status 0x%x", fn->fd.data_base_addr, device_status);
 	if (error) {
 		dev_err(&fn->dev,
 			"Failed to read device status: %d.\n", error);

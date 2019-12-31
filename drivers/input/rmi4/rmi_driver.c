@@ -128,12 +128,14 @@ static int rmi_driver_process_config_requests(struct rmi_device *rmi_dev)
 	return 0;
 }
 
+static int __count = 0;
 static int rmi_process_interrupt_requests(struct rmi_device *rmi_dev)
 {
 	struct rmi_driver_data *data = dev_get_drvdata(&rmi_dev->dev);
 	struct device *dev = &rmi_dev->dev;
 	int i;
 	int error;
+	u8 tmp;
 
 	if (!data)
 		return 0;
@@ -147,6 +149,17 @@ static int rmi_process_interrupt_requests(struct rmi_device *rmi_dev)
 			dev_err(dev, "Failed to read irqs, code=%d\n", error);
 			return error;
 		}
+
+		// LINH add
+		tmp = 0;
+		error = rmi_read_block(rmi_dev,
+			data->f01_container->fd.data_base_addr,
+			&tmp, 1);
+		print_dbg("+device status: %x", tmp);
+		if (error < 0) {
+			dev_err(dev, "Failed to read dev status, code=%d\n", error);
+			return error;
+		}
 	}
 
 	mutex_lock(&data->irq_mutex);
@@ -158,9 +171,15 @@ static int rmi_process_interrupt_requests(struct rmi_device *rmi_dev)
 	 */
 	mutex_unlock(&data->irq_mutex);
 
-	print_dbg("irq_count %d", data->irq_count);
-	for (i = 0; i < data->irq_count; ++i) {
-		print_dbg("%d: status: %x", i, *data->irq_status);
+	print_dbg("irq_count %d, status 0x%x", data->irq_count, data->irq_status[0]);
+	if (__count++ == 1) {
+		data->irq_status[0] = 0x06;
+		i = irq_find_mapping(data->irqdomain, 0);
+		print_dbg("irq 0: %d", i);
+		i = irq_find_mapping(data->irqdomain, 1);
+		print_dbg("irq 1: %d", i);
+		i = irq_find_mapping(data->irqdomain, 2);
+		print_dbg("irq 2: %d", i);
 	}
 	for_each_set_bit(i, data->irq_status, data->irq_count)
 		handle_nested_irq(irq_find_mapping(data->irqdomain, i));
@@ -201,6 +220,7 @@ static irqreturn_t rmi_irq_fn(int irq, void *dev_id)
 	struct rmi_driver_data *drvdata = dev_get_drvdata(&rmi_dev->dev);
 	struct rmi4_attn_data attn_data = {0};
 	int ret, count;
+	struct rmi_function *fn;
 
 	count = kfifo_get(&drvdata->attn_fifo, &attn_data);
 	if (count) {
@@ -208,6 +228,7 @@ static irqreturn_t rmi_irq_fn(int irq, void *dev_id)
 		drvdata->attn_data = attn_data;
 	}
 
+	print_dbg("irq %d, count %d, status 0x%x", irq, count, attn_data.irq_status);
 	ret = rmi_process_interrupt_requests(rmi_dev);
 	if (ret)
 		rmi_dbg(RMI_DEBUG_CORE, &rmi_dev->dev,
@@ -216,6 +237,13 @@ static irqreturn_t rmi_irq_fn(int irq, void *dev_id)
 	if (count) {
 		kfree(attn_data.data);
 		attn_data.data = NULL;
+	}
+
+	fn = rmi_find_function(rmi_dev, 0x12);
+	if (fn) {
+
+	} else {
+		print_dbg("can't find f12");
 	}
 
 	if (!kfifo_is_empty(&drvdata->attn_fifo))
@@ -234,6 +262,7 @@ static int rmi_irq_init(struct rmi_device *rmi_dev)
 	if (!irq_flags)
 		irq_flags = IRQF_TRIGGER_LOW;
 
+	print_dbg("irq %d, flag 0x%x", pdata->irq, irq_flags);
 	ret = devm_request_threaded_irq(&rmi_dev->dev, pdata->irq, NULL,
 					rmi_irq_fn, irq_flags | IRQF_ONESHOT,
 					dev_driver_string(rmi_dev->xport->dev),
@@ -528,6 +557,15 @@ static int rmi_scan_pdt_page(struct rmi_device *rmi_dev,
 		if (error)
 			return error;
 
+		print_dbg("page %d", page);
+		print_dbg("page_start             %u", pdt_entry.page_start);
+		print_dbg("query_base_addr        %u", pdt_entry.query_base_addr);
+		print_dbg("command_base_addr      %u", pdt_entry.command_base_addr);
+		print_dbg("control_base_addr      %u", pdt_entry.control_base_addr);
+		print_dbg("data_base_addr         %u", pdt_entry.data_base_addr);
+		print_dbg("interrupt_source_count %u", pdt_entry.interrupt_source_count);
+		print_dbg("function_version       %u", pdt_entry.function_version);
+		print_dbg("function_number        %u", pdt_entry.function_number);
 		if (RMI4_END_OF_PDT(pdt_entry.function_number))
 			break;
 
@@ -829,6 +867,7 @@ int rmi_initial_reset(struct rmi_device *rmi_dev, void *ctx,
 			return error;
 		}
 
+		print_dbg("delay %dms", pdata->reset_delay_ms ?: DEFAULT_RESET_DELAY_MS);
 		mdelay(pdata->reset_delay_ms ?: DEFAULT_RESET_DELAY_MS);
 
 		return RMI_SCAN_DONE;
@@ -920,6 +959,7 @@ void rmi_enable_irq(struct rmi_device *rmi_dev, bool clear_wake)
 	irq_flags = irq_get_trigger_type(pdata->irq);
 	if (irq_flags & IRQ_TYPE_EDGE_BOTH)
 		rmi_process_interrupt_requests(rmi_dev);
+	print_dbg("irq %d, flag 0x%x", irq, irq_flags);
 
 out:
 	mutex_unlock(&data->enabled_mutex);
@@ -1075,6 +1115,9 @@ int rmi_probe_interrupts(struct rmi_driver_data *data)
 	data->fn_irq_bits	= data->irq_memory + size * 1;
 	data->current_irq_mask	= data->irq_memory + size * 2;
 	data->new_irq_mask	= data->irq_memory + size * 3;
+
+	print_dbg("irq_count %d, irq_status %x, irq_bits %x, mask %x - %x",
+		data->irq_count, *data->irq_status, *data->fn_irq_bits, *data->current_irq_mask, *data->new_irq_mask);
 
 	return retval;
 }

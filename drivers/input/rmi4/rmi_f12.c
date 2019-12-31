@@ -153,6 +153,8 @@ static void rmi_f12_process_objects(struct f12_data *f12, u8 *data1, int size)
 	if ((f12->data1->num_subpackets * F12_DATA1_BYTES_PER_OBJ) > size)
 		objects = size / F12_DATA1_BYTES_PER_OBJ;
 
+	print_dbg("objects %d", objects);
+
 	for (i = 0; i < objects; i++) {
 		struct rmi_2d_sensor_abs_object *obj = &sensor->objs[i];
 
@@ -183,6 +185,7 @@ static void rmi_f12_process_objects(struct f12_data *f12, u8 *data1, int size)
 		obj->wy = data1[7];
 
 		rmi_2d_sensor_abs_process(sensor, obj, i);
+		print_dbg("type %d, x %d, y %d, z %d, wx %d, wy %d", obj->type, obj->x, obj->y, obj->z, obj->wx, obj->wy);
 
 		data1 += F12_DATA1_BYTES_PER_OBJ;
 	}
@@ -249,6 +252,7 @@ static int rmi_f12_write_control_regs(struct rmi_function *fn)
 	u16 control_offset = 0;
 	u8 subpacket_offset = 0;
 
+	print_dbg("");
 	if (f12->has_dribble
 	    && (f12->sensor.dribble != RMI_REG_STATE_DEFAULT)) {
 		item = rmi_get_register_desc_item(&f12->control_reg_desc, 20);
@@ -293,6 +297,7 @@ static int rmi_f12_write_control_regs(struct rmi_function *fn)
 				return ret;
 		}
 	}
+	print_dbg("OK");
 
 	return 0;
 
@@ -303,12 +308,15 @@ static int rmi_f12_config(struct rmi_function *fn)
 	struct rmi_driver *drv = fn->rmi_dev->driver;
 	int ret;
 
+	print_dbg("set_irq_bits");
 	drv->set_irq_bits(fn->rmi_dev, fn->irq_mask);
 
 	ret = rmi_f12_write_control_regs(fn);
 	if (ret)
 		dev_warn(&fn->dev,
 			"Failed to write F12 control registers: %d\n", ret);
+
+	print_inf("configured ok");
 
 	return 0;
 }
@@ -328,13 +336,13 @@ static int rmi_f12_probe(struct rmi_function *fn)
 
 	rmi_dbg(RMI_DEBUG_FN, &fn->dev, "%s\n", __func__);
 
-	print_dbg("read query %x", query_addr);
 	ret = rmi_read(fn->rmi_dev, query_addr, &buf);
 	if (ret < 0) {
 		dev_err(&fn->dev, "Failed to read general info register: %d\n",
 			ret);
 		return -ENODEV;
 	}
+	print_dbg("+read query %x, val %x", query_addr, buf);
 	++query_addr;
 
 	if (!(buf & BIT(0))) {
@@ -351,6 +359,7 @@ static int rmi_f12_probe(struct rmi_function *fn)
 
 	if (fn->dev.of_node) {
 		ret = rmi_2d_sensor_of_probe(&fn->dev, &f12->sensor_pdata);
+		print_dbg("2d sensor probed, ret %d", ret);
 		if (ret)
 			return ret;
 	} else {
@@ -526,6 +535,8 @@ static int rmi_f12_probe(struct rmi_function *fn)
 	ret = rmi_2d_sensor_configure_input(fn, sensor);
 	if (ret)
 		return ret;
+
+	print_inf("probe OK");
 
 	return 0;
 }
