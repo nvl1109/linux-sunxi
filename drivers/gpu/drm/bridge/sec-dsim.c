@@ -499,7 +499,7 @@ static int sec_mipi_dsim_host_attach(struct mipi_dsi_host *host,
 	if (!(dsi->mode_flags & MIPI_DSI_MODE_VIDEO)		||
 	    !((dsi->mode_flags & MIPI_DSI_MODE_VIDEO_BURST)	||
 	      (dsi->mode_flags & MIPI_DSI_MODE_VIDEO_SYNC_PULSE))) {
-		dev_err(dev, "unsupported dsi mode\n");
+		dev_err(dev, "unsupported dsi mode 0x%lx\n", dsi->mode_flags);
 		return -EINVAL;
 	}
 
@@ -772,8 +772,7 @@ static ssize_t sec_mipi_dsim_host_transfer(struct mipi_dsi_host *host,
 		ret = sec_mipi_dsim_read_pl_from_sfr_fifo(dsim,
 							  msg->rx_buf,
 							  msg->rx_len);
-		if (ret < 0)
-			return ret;
+		return ret;
 	}
 
 	return 0;
@@ -932,6 +931,8 @@ static void sec_mipi_dsim_set_main_mode(struct sec_mipi_dsim *dsim)
 			 wc - MIPI_HSA_PKT_OVERHEAD : vmode->hsync_len;
 	} else
 		hsa_wc = dsim->hpar->hsa_wc;
+
+	// dev_info(dsim->dev, "LINH %s(): hfp_wc = %d, hbp_wc = %d, hsa_wc = %d\n", __func__, hfp_wc, hbp_wc, hsa_wc);
 
 	msync |= MSYNC_SET_MAINVSA(vmode->vsync_len) |
 		 MSYNC_SET_MAINHSA(hsa_wc);
@@ -1303,6 +1304,8 @@ int sec_mipi_dsim_check_pll_out(void *driver_private,
 			dev_dbg(dsim->dev, "no pre-exist hpar can be used\n");
 	}
 
+	// dev_info(dsim->dev, "LINH %s(): pix_clk = %d, bit_clk = %d\n", __func__, dsim->pix_clk, dsim->bit_clk);
+
 	return 0;
 }
 EXPORT_SYMBOL(sec_mipi_dsim_check_pll_out);
@@ -1507,6 +1510,9 @@ static void sec_mipi_dsim_bridge_mode_set(struct drm_bridge *bridge,
 	}
 
 	drm_display_mode_to_videomode(adjusted_mode, &dsim->vmode);
+
+	// dev_info(dsim->dev, "LINH %s(): clock %d, hact %d, hss %d, hse %d, htotal %d, vact %d, vss %d, vse %d, vtotal %d, vscan %d\n", \
+	// 	__func__, adjusted_mode->clock, adjusted_mode->hdisplay, adjusted_mode->hsync_start, adjusted_mode->hsync_end, adjusted_mode->htotal, adjusted_mode->vdisplay, adjusted_mode->vsync_start, adjusted_mode->vsync_end, adjusted_mode->vtotal, adjusted_mode->vscan);
 }
 
 static const struct drm_bridge_funcs sec_mipi_dsim_bridge_funcs = {

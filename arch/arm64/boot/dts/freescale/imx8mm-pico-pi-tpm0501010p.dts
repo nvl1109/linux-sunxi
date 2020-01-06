@@ -1,0 +1,105 @@
+/*
+ * Copyright 2019 PCS
+ *
+ * Author: Linh Nguyen <nvl1109@gmail.com>
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#include "imx8mm-pico-pi.dts"
+
+/ {
+	backlight_mipi {
+		status = "okay";
+	};
+};
+
+&mipi_dsi {
+	status = "okay";
+
+	panel@0 {
+		compatible = "jdi,tpm0501010p";
+		reg = <0>;
+		pinctrl-0 = <&pinctrl_mipi_dsi_rst &pinctrl_touch_rst>;
+		reset-gpio = <&gpio3 9 GPIO_ACTIVE_LOW>;
+		tpreset-gpio = <&gpio4 28 GPIO_ACTIVE_LOW>;
+		dsi-lanes = <4>;
+		panel-width-mm = <62>;
+		panel-height-mm = <110>;
+		timing-mode = <0>;
+		video-mode = <2>;
+
+		display-timings {
+			timing {
+				clock-frequency = <148500000>;
+				hactive = <1080>;
+				vactive = <1920>;
+				hfront-porch = <70>;
+				hsync-len = <24>;
+				hback-porch = <100>;
+				vfront-porch = <4>;
+				vsync-len = <4>;
+				vback-porch = <2>;
+
+				hsync-active = <0>;
+				vsync-active = <0>;
+				de-active = <0>;
+				pixelclk-active = <0>;
+			};
+		};
+	};
+};
+
+/*&iomuxc {
+	imx8mm-pico {
+		pinctrl_mipi_dsi_en: mipi_dsi_en {
+			fsl,pins = <
+				MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8	0x16
+			>;
+		};
+	};
+};*/
+
+&i2c3 {
+	touchscreen@20 {
+		compatible = "syna,rmi4-i2c";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_touch_rst>;
+		reg = <0x20>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <7 IRQ_TYPE_EDGE_FALLING>;
+		/*syna,reset-delay-ms = <10>;
+		syna,startup-delay-ms = <10>;*/
+
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		rmi4-f01@1 {
+			reg = <0x1>;
+			syna,nosleep-mode = <1>;
+		};
+
+		rmi4-f11@11 {
+			reg = <0x11>;
+			touchscreen-inverted-y;
+			touchscreen-swapped-x-y;
+			syna,sensor-type = <1>;
+
+		};
+
+		rmi4-f12@12 {
+			reg = <0x12>;
+			touchscreen-inverted-y;
+			touchscreen-swapped-x-y;
+			syna,sensor-type = <1>;
+		};
+	};
+};

@@ -497,15 +497,15 @@ void dcss_dtg_sync_set(struct dcss_soc *dcss, struct videomode *vm)
 	u32 pixclock = vm->pixelclock;
 	u32 actual_clk;
 
-	dev_dbg(dcss->dev, "hfront_porch = %d\n", vm->hfront_porch);
-	dev_dbg(dcss->dev, "hback_porch = %d\n", vm->hback_porch);
-	dev_dbg(dcss->dev, "hsync_len = %d\n", vm->hsync_len);
-	dev_dbg(dcss->dev, "hactive = %d\n", vm->hactive);
-	dev_dbg(dcss->dev, "vfront_porch = %d\n", vm->vfront_porch);
-	dev_dbg(dcss->dev, "vback_porch = %d\n", vm->vback_porch);
-	dev_dbg(dcss->dev, "vsync_len = %d\n", vm->vsync_len);
-	dev_dbg(dcss->dev, "vactive = %d\n", vm->vactive);
-	dev_dbg(dcss->dev, "pixelclock = %lu\n", vm->pixelclock);
+	dev_info(dcss->dev, "hfront_porch = %d\n", vm->hfront_porch);
+	dev_info(dcss->dev, "hback_porch = %d\n", vm->hback_porch);
+	dev_info(dcss->dev, "hsync_len = %d\n", vm->hsync_len);
+	dev_info(dcss->dev, "hactive = %d\n", vm->hactive);
+	dev_info(dcss->dev, "vfront_porch = %d\n", vm->vfront_porch);
+	dev_info(dcss->dev, "vback_porch = %d\n", vm->vback_porch);
+	dev_info(dcss->dev, "vsync_len = %d\n", vm->vsync_len);
+	dev_info(dcss->dev, "vactive = %d\n", vm->vactive);
+	dev_info(dcss->dev, "pixelclock = %lu\n", vm->pixelclock);
 
 	dtg_lrc_x = vm->hfront_porch + vm->hback_porch + vm->hsync_len +
 		    vm->hactive - 1;
