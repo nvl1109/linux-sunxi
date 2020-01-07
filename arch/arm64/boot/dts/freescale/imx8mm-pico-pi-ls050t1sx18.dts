@@ -28,9 +28,9 @@
 	panel@0 {
 		compatible = "sharp,ls050t1sx18";
 		reg = <0>;
-		pinctrl-0 = <&pinctrl_mipi_dsi_rst &pinctrl_touch_rst>;
+		pinctrl-0 = <&pinctrl_mipi_dsi_rst>;
 		reset-gpio = <&gpio3 9 GPIO_ACTIVE_LOW>;
-		tpreset-gpio = <&gpio4 28 GPIO_ACTIVE_LOW>;
+		/*tpreset-gpio = <&gpio4 28 GPIO_ACTIVE_LOW>;*/
 		dsi-lanes = <4>;
 		panel-width-mm = <62>;
 		panel-height-mm = <110>;
@@ -56,5 +56,25 @@
 				pixelclk-active = <0>;
 			};
 		};
+	};
+};
+
+&i2c3 {
+	touchscreen@18 {
+		compatible = "sharp,shtsc_i2c";
+		status = "ok";
+		reg = <0x18>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_touch_rst &pinctrl_touch_irq>;
+		sharp,reset-gpio = <&gpio4 28 0>;
+		sharp,irq-gpio = <&gpio1 7 0>;
+		sharp,panel-coords = <0 0 1079 1919>; // depends on an LCD resolution (0 0 Xmax-1 Ymax-1)
+		sharp,display-coords = <0 0 1079 1919>; // depends on an LCD resolution (0 0 Xmax-1 Ymax-1)
+		sharp,i2c-pull-up;
+		ts_touch_num_max = <10>;
+		ts_pressure_max = <65535>;
+		ts_flip_x = <0>;
+		ts_flip_y = <0>;
+		ts_swap_xy = <0>;
 	};
 };
